@@ -1,0 +1,169 @@
+# ========================================== #
+#         NEOCHAT - GENERAL SETTINGS         #
+# ========================================== #
+
+# --- UPDATE CHECKER ---
+update-checker:
+  enable: true
+
+# --- PRIVATE MESSAGES ---
+private-messages:
+  enable: true # Set to false to disable /msg, /reply, /togglemsg, and /socialspy
+
+# ========================================== #
+#               CHAT FEATURES                #
+# ========================================== #
+
+# --- MENTIONS (PING) ---
+ping:
+  enable: true
+  prefix: "@" # To mention a player, use @Player
+  sound:
+    enable: true
+    type: "BLOCK_NOTE_BLOCK_PLING"
+    volume: 0.8
+    pitch: 1.0
+  format:
+    receiver: "<red>%name%</red>" # How the mentioned player sees it
+    others: "<white>%name%</white>" # How others see it
+
+# --- LINK FORMATTING ---
+links:
+  enable: true
+  permission: neochat.chat.link # Allows links to be formatted
+  regex: "[-a-zA-Z0-9@:%._+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b([-a-zA-Z0-9()@:%_+.~#?&/=]*)"
+  transform: "<hover:show_text:'<white>Click to open link'><click:open_url:'%url%'><aqua>%url%</aqua></click></hover>"
+
+# ========================================== #
+#               PLACEHOLDERS                 #
+# ========================================== #
+chat-placeholders:
+  - name: ping
+    regex: "(?i)\\[ping\\]"
+    result: "<green>%player_ping% ms"
+    permission: neochat.placeholder.ping
+  - name: pos
+    regex: "(?i)\\[pos\\]"
+    result: "<aqua>World: <white>%player_world% <yellow>X: <white>%player_x% <yellow>Y: <white>%player_y% <yellow>Z: <white>%player_z%"
+    permission: neochat.placeholder.pos
+  - name: money
+    regex: "(?i)\\[money\\]"
+    result: "<green>Balance: <white>$%vault_eco_balance_formatted%"
+    permission: neochat.placeholder.money
+  - name: playtime
+    regex: "(?i)\\[playtime\\]"
+    result: "<gold>Playtime: <white>%statistic_hours_played% hours"
+    permission: neochat.placeholder.playtime
+  - name: item
+    enable: true
+    regex: "(?i)\\[item\\]|\\[i\\]"
+    permission: neochat.placeholder.item
+    result: "<aqua>x<amount> <white><item>"
+  - name: inv
+    enable: true
+    regex: "(?i)\\[inv\\]"
+    permission: neochat.placeholder.inv
+    gui-title: "%player%'s Inventory"
+    result: "<hover:show_text:'<gray>Click to view inventory'><click:run_command:'/neochat viewinv %id%'><yellow>✦ [%player%'s Inventory] ✦</click></hover>"
+  - name: ender
+    enable: true
+    regex: "(?i)\\[ender\\]"
+    permission: neochat.placeholder.ender
+    gui-title: "%player%'s EnderChest"
+    result: "<hover:show_text:'<gray>Click to view EnderChest'><click:run_command:'/neochat viewinv %id%'><light_purple>✦ [%player%'s EnderChest] ✦</click></hover>"
+  - name: shulker
+    enable: true
+    regex: "(?i)\\[shulker\\]"
+    permission: neochat.placeholder.shulker
+    gui-title: "%player%'s Shulker Box"
+    result: "<hover:show_text:'<gray>Click to view Shulker Box'><click:run_command:'/neochat viewinv %id%'><color:#9767a9>✦ [%player%'s Shulker Box] ✦</click></hover>"
+
+# ========================================== #
+#            SECURITY & FILTERS              #
+# ========================================== #
+
+# --- ANTI-SPAM SYSTEM ---
+chat-cooldown:
+  enable: true
+  time: 3 # Cooldown time in seconds
+  permission-bypass: "neochat.bypass.cooldown"
+
+# Advanced cooldown rules (prepared for future use)
+chat-cooldowns:
+  - messages: 2
+    cooldown: 1000
+  - messages: 4
+    cooldown: 5000
+
+# --- ANTI-FLOOD ---
+anti-flood:
+  enable: true
+  max-message-length: 80
+  block-repeated-chars: true # Blocks things like "Hoooooooola" (more than 4 identical characters)
+  alert-staff: true
+  permission-bypass: "neochat.bypass.flood"
+
+# --- SIMILARITY CHECK ---
+similarity-check:
+  enable: true
+  cache-time-seconds: 15
+  max-similarity-percent: 80 # If the message is 80% or more similar to the previous one, it gets blocked
+  permission-bypass: "neochat.bypass.similarity"
+
+# --- ANTI-CAPS ---
+anti-caps:
+  enable: true
+  max-uppercase: 5 # Maximum number of uppercase letters allowed per message
+  permission-bypass: "neochat.bypass.caps"
+
+# --- ANTI-SWEAR SYSTEM ---
+anti-swear:
+  enable: true
+  replace-with: "***"
+  permission-bypass: "neochat.bypass.swear"
+  blocked-words:
+    - "fuck"
+    - "shit"
+    - "bitch"
+    - "puta"
+    - "mierda"
+    - "joder"
+
+# --- CHARACTER FILTER ---
+# Regex for allowed characters in chat
+alphanumeric-regex: "^[a-zA-Z0-9_.?!^¨%ù*&é\"#'{(\\[\\-|èêë`\\\\çà)\\]=}ûî+<>:²€$/\\\\\\,\\-â@;ôñÑáéíóúÁÉÍÓÚüÜ ]+$"
+alphanumeric-permission: "neochat.bypass.alphanumeric"
+
+# ItemsAdder font support (Emojis)
+itemadders-font-regex: "(?<=:)(.*?)(?=\\s*\\:)"
+
+# Custom chat rules
+custom-rules:
+  - regex: "(can|may) i (have|be) (op|admin|mod)"
+    permission: neochat.bypass.custom.rules
+    message: "<red>We are not currently looking for staff."
+
+
+# ========================================== #
+#               INTEGRATIONS                 #
+# ========================================== #
+
+# --- DISCORD WEBHOOK ---
+discord-webhook:
+  enable: true
+  url: "https://discord.com/api/webhooks/1470313491268108482/TquePxwqzPiT4kZdWYIBe7L09mgDX5dohzgaTfi0hRb6NaRaDioXkQwa_0v_sEcRFEDn"
+  format: "**%player%**: %message%" # Supports Discord Markdown (e.g., ** for bold)
+
+# --- TOWNY CHAT ---
+towny-chat:
+  enable: true # Requires server restart if changed
+  format: "&f%townyadvanced_town%<click:suggest_command:'/msg %player_name% '><hover:show_text:'<hover_text>'>&f%player_name%</hover></click> &8» &2<message>"
+  hover-message: |-
+    <gray>   PLAYER PROFILE
+    
+    &8• &fName: &9%player_name%
+    &8• &fHealth: &4%player_health_scale% &c❤
+    &8• &fPing: &a%player_ping%ms &2☄
+    &8• &fTown: &a%townyadvanced_town% &6🛡
+    
+    &7<i>Click to send a private message</i>

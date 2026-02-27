@@ -1,0 +1,44 @@
+name: NeoChat
+version: '${project.version}'
+main: net.aquiles.neochat.NeoChat
+api-version: '1.19'
+authors: [ Aquiles ]
+depend: [ ]
+softdepend: [ PlaceholderAPI, ItemsAdder ]
+description: Advanced plugin for chat formatting, interactivity, and placeholders.
+website: discord.gg/Wq9AHJP6VJ
+commands:
+  neochat:
+    description: Main administration command.
+    permission: neochat.admin.reload
+    aliases: [ nc ]
+  chatmute:
+    description: Mutes the global chat.
+    permission: neochat.admin.mute
+  chatunmute:
+    description: Unmutes the global chat.
+    permission: neochat.admin.mute
+  msg:
+    description: Sends a private message.
+    permission: neochat.pm.use
+    aliases: [ tell, w, m ]
+  reply:
+    description: Replies to a private message.
+    permission: neochat.pm.use
+    aliases: [ r ]
+  togglemsg:
+    description: Toggles private messages on or off.
+    permission: neochat.pm.toggle
+  socialspy:
+    description: Allows reading other players' private messages.
+    permission: neochat.admin.spy
+    aliases: [ spy ]
+  ignore:
+    description: Ignores messages from a specific player.
+    permission: neochat.ignore.use
+  ignoreall:
+    description: Ignores messages from all players.
+    permission: neochat.ignore.ignoreall
+  tc:
+    description: Activate the city chat or send a message.
+    permission: neochat.command.townychat

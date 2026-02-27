@@ -1,0 +1,28 @@
+# ========================================== #
+#         CHAT FORMATS & PERMISSIONS         #
+# ========================================== #
+
+formats:
+  vip-format:
+    groups:
+      - vip
+      - vip+
+    priority: 1
+    permission: "neochat.format.vips"
+    chat-format: "<click:suggest_command:'/msg %player_name% '><hover:show_text:'<hover_text>'>&6VIP &e%player_name%</hover></click> &8» &f<message>"
+    hover-message: |-
+      <gray>   PLAYER PROFILE
+      
+      &8• &fName: &9%player_name%
+      &8• &fHealth: &4%player_health_scale% &c❤
+      &8• &fPing: &a%player_ping%ms &2☄
+      
+      &7<i>Click to send a private message</i>
+
+  default:
+    groups:
+      - default
+    priority: 99
+    permission: "neochat.format.default"
+    chat-format: "&7%player_name% &8» &r<message>"
+    hover-message: ""
