@@ -1,0 +1,68 @@
+# ========================================== #
+#               SYSTEM MESSAGES              #
+# ========================================== #
+no-permission: "<red>You don't have permission to use this command."
+reload: "<green>NeoChat configuration and messages have been reloaded!"
+chat-muted-broadcast: "<red>Global chat has been muted by an administrator."
+chat-unmuted-broadcast: "<green>Global chat has been unmuted."
+chat-already-muted: "<red>The chat is already muted."
+chat-already-unmuted: "<red>The chat is already unmuted."
+chat-is-muted: "<red>The chat is muted. You cannot send messages right now."
+chat-invalid-characters: "<red>Your message contains invalid characters."
+
+# ========================================== #
+#             SECURITY & FILTERS             #
+# ========================================== #
+chat-cooldown-message: "<red>Please don't spam! Wait <time> seconds."
+chat-flood-length: "<red>Your message is too long."
+chat-flood-chars: "<red>Please do not repeat characters so many times."
+chat-similar: "<red>Your message is too similar to the previous one. Mix it up!"
+chat-caps: "<red>You have used too many capital letters."
+staff-alert-flood: "<dark_red>[Alert] <red>%player% <gray>is attempting to flood the chat."
+
+# ========================================== #
+#              PRIVATE MESSAGES              #
+# ========================================== #
+pm-player-not-found: "<red>That player is not online."
+pm-cannot-message-self: "<red>You cannot send a message to yourself."
+pm-target-disabled: "<red>That player has private messages disabled."
+pm-self-disabled: "<red>You have private messages disabled. Use /togglemsg to enable them."
+pm-no-reply: "<red>You have nobody to reply to."
+pm-toggle-on: "<green>You have enabled private messages."
+pm-toggle-off: "<red>You have disabled private messages."
+pm-spy-on: "<green>You have enabled SocialSpy."
+pm-spy-off: "<red>You have disabled SocialSpy."
+
+pm-format-send: "<gray>[<aqua>Me <gray>-> <aqua>%target%<gray>] <white><message>"
+pm-format-receive: "<gray>[<aqua>%sender% <gray>-> <aqua>Me<gray>] <white><message>"
+pm-format-spy: "<dark_gray>[Spy] <gray>%sender% -> %target%: <white><message>"
+
+# ========================================== #
+#                IGNORE SYSTEM               #
+# ========================================== #
+ignore-usage: "<red>Usage: /ignore <player>"
+ignore-add: "<green>You are now ignoring <white>%player%<green>. You will no longer see their messages."
+ignore-remove: "<yellow>You are no longer ignoring <white>%player%<yellow>."
+ignore-cannot-ignore-self: "<red>You cannot ignore yourself."
+ignore-cannot-ignore-admin: "<red>You cannot ignore an administrator."
+ignore-all-on: "<green>You have enabled Ignore-All. You will only see messages from Staff."
+ignore-all-off: "<yellow>You have disabled Ignore-All."
+ignore-target-ignoring-you: "<red>You cannot send a message to this player because they are ignoring you."
+
+# ========================================== #
+#             INVENTORY MESSAGES             #
+# ========================================== #
+inv-expired: "<red>This inventory has expired or no longer exists."
+inv-invalid-id: "<red>Invalid inventory ID."
+
+# ========================================== #
+#               INTEGRATIONS                 #
+# ========================================== #
+towny-need-town: "<aqua><bold>TOWNY</bold> <dark_gray>» <white>You must belong to a town to use this chat!"
+towny-chat-on: "<aqua><bold>TOWNY</bold> <dark_gray>» <green>You have enabled your town chat."
+towny-chat-off: "<aqua><bold>TOWNY</bold> <dark_gray>» <red>You have returned to the global chat."
+
+# ========================================== #
+#               UPDATE CHECKER               #
+# ========================================== #
+update-available: "<green>A new update is available for NeoChat! <gray>Current version: <white>%current% <gray>| New version: <white>%new%"
