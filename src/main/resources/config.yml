@@ -64,19 +64,19 @@ chat-placeholders:
     regex: "(?i)\\[inv\\]"
     permission: neochat.placeholder.inv
     gui-title: "%player%'s Inventory"
-    result: "<hover:show_text:'<gray>Click to view inventory'><click:run_command:'/neochat viewinv %id%'><yellow>✦ [%player%'s Inventory] ✦</click></hover>"
+    result: "<hover:show_text:'<gray>Click to view inventory'><click:run_command:'/viewinv %id%'><yellow>✦ [%player%'s Inventory] ✦</click></hover>"
   - name: ender
     enable: true
     regex: "(?i)\\[ender\\]"
     permission: neochat.placeholder.ender
     gui-title: "%player%'s EnderChest"
-    result: "<hover:show_text:'<gray>Click to view EnderChest'><click:run_command:'/neochat viewinv %id%'><light_purple>✦ [%player%'s EnderChest] ✦</click></hover>"
+    result: "<hover:show_text:'<gray>Click to view EnderChest'><click:run_command:'/viewinv %id%'><light_purple>✦ [%player%'s EnderChest] ✦</click></hover>"
   - name: shulker
     enable: true
     regex: "(?i)\\[shulker\\]"
     permission: neochat.placeholder.shulker
     gui-title: "%player%'s Shulker Box"
-    result: "<hover:show_text:'<gray>Click to view Shulker Box'><click:run_command:'/neochat viewinv %id%'><color:#9767a9>✦ [%player%'s Shulker Box] ✦</click></hover>"
+    result: "<hover:show_text:'<gray>Click to view Shulker Box'><click:run_command:'/viewinv %id%'><color:#9767a9>✦ [%player%'s Shulker Box] ✦</click></hover>"
 
 # ========================================== #
 #            SECURITY & FILTERS              #

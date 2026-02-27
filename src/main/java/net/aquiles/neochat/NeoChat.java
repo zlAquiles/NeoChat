@@ -6,6 +6,7 @@ import net.aquiles.neochat.commands.IgnoreCommand;
 import net.aquiles.neochat.commands.MessageCommand;
 import net.aquiles.neochat.gui.GUIListener;
 import net.aquiles.neochat.managers.PlayerDataManager;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -26,6 +27,7 @@ public final class NeoChat extends JavaPlugin implements org.bukkit.event.Listen
     private final java.util.Set<java.util.UUID> townyChatToggled = new java.util.HashSet<>();
     private boolean townyChatEnabled = false;
     private net.aquiles.neochat.utils.DiscordManager discordManager;
+    private ChatListener chatListener;
 
     @Override
     public void onEnable() {
@@ -41,7 +43,6 @@ public final class NeoChat extends JavaPlugin implements org.bukkit.event.Listen
         formats = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(formatsFile);
 
         playerDataManager = new PlayerDataManager(this);
-
         discordManager = new net.aquiles.neochat.utils.DiscordManager(this);
 
         if (getConfig().getBoolean("update-checker.enable", true)) {
@@ -55,9 +56,7 @@ public final class NeoChat extends JavaPlugin implements org.bukkit.event.Listen
                     String parsedLine = updateMsg.replace("%current%", this.getDescription().getVersion()).replace("%new%", version);
 
                     org.bukkit.command.ConsoleCommandSender console = org.bukkit.Bukkit.getConsoleSender();
-                    net.kyori.adventure.text.minimessage.MiniMessage mm = net.kyori.adventure.text.minimessage.MiniMessage.miniMessage();
-
-                    console.sendMessage(mm.deserialize(parsedLine));
+                    console.sendMessage(MiniMessage.miniMessage().deserialize(parsedLine));
                 }
             });
         }
@@ -102,12 +101,18 @@ public final class NeoChat extends JavaPlugin implements org.bukkit.event.Listen
     }
 
     private void registerListeners() {
-        getServer().getPluginManager().registerEvents(new ChatListener(this), this);
+        chatListener = new ChatListener(this);
+        getServer().getPluginManager().registerEvents(chatListener, this);
         getServer().getPluginManager().registerEvents(new GUIListener(this), this);
         getServer().getPluginManager().registerEvents(this, this);
     }
 
     private void registerCommands() {
+
+        net.aquiles.neochat.commands.ViewInvCommand viewInvCmd = new net.aquiles.neochat.commands.ViewInvCommand(this);
+        getCommand("viewinv").setExecutor(viewInvCmd);
+        getCommand("viewinv").setTabCompleter(viewInvCmd);
+
         AdminChatCommand adminCommand = new AdminChatCommand(this);
         getCommand("neochat").setExecutor(adminCommand);
         getCommand("neochat").setTabCompleter(adminCommand);
@@ -139,11 +144,14 @@ public final class NeoChat extends JavaPlugin implements org.bukkit.event.Listen
         reloadConfig();
         messages = YamlConfiguration.loadConfiguration(messagesFile);
         formats = YamlConfiguration.loadConfiguration(formatsFile);
+        if (chatListener != null) {
+            chatListener.loadSettings();
+        }
     }
 
     private void printLogo() {
         org.bukkit.command.ConsoleCommandSender console = Bukkit.getConsoleSender();
-        net.kyori.adventure.text.minimessage.MiniMessage mm = net.kyori.adventure.text.minimessage.MiniMessage.miniMessage();
+        MiniMessage mm = MiniMessage.miniMessage();
 
         String version = getDescription().getVersion();
         String serverName = getServer().getName();
@@ -157,29 +165,12 @@ public final class NeoChat extends JavaPlugin implements org.bukkit.event.Listen
         console.sendMessage(mm.deserialize(" "));
     }
 
-    public PlayerDataManager getPlayerDataManager() {
-        return playerDataManager;
-    }
-
-    public YamlConfiguration getMessages() {
-        return messages;
-    }
-
-    public YamlConfiguration getFormats() {
-        return formats;
-    }
-
-    public boolean isChatMuted() {
-        return chatMuted;
-    }
-
-    public void setChatMuted(boolean chatMuted) {
-        this.chatMuted = chatMuted;
-    }
-
-    public boolean isPapiEnabled() {
-        return papiEnabled;
-    }
+    public PlayerDataManager getPlayerDataManager() { return playerDataManager; }
+    public YamlConfiguration getMessages() { return messages; }
+    public YamlConfiguration getFormats() { return formats; }
+    public boolean isChatMuted() { return chatMuted; }
+    public void setChatMuted(boolean chatMuted) { this.chatMuted = chatMuted; }
+    public boolean isPapiEnabled() { return papiEnabled; }
 
     @org.bukkit.event.EventHandler
     public void onPlayerJoin(org.bukkit.event.player.PlayerJoinEvent event) {
@@ -187,8 +178,7 @@ public final class NeoChat extends JavaPlugin implements org.bukkit.event.Listen
         if (latestVersion != null && player.hasPermission("neochat.admin")) {
             String updateMsg = getMessages().getString("update-available", "<green>¡Nueva actualizacion disponible para NeoChat! <gray>Version actual: <white>%current% <gray>| Nueva version: <white>%new%");
             String parsedLine = updateMsg.replace("%current%", this.getDescription().getVersion()).replace("%new%", latestVersion);
-
-            player.sendMessage(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(parsedLine));
+            player.sendMessage(MiniMessage.miniMessage().deserialize(parsedLine));
         }
     }
 
@@ -205,6 +195,7 @@ public final class NeoChat extends JavaPlugin implements org.bukkit.event.Listen
                 .replace("&f", "<white>").replace("&l", "<bold>").replace("&m", "<strikethrough>")
                 .replace("&n", "<underlined>").replace("&o", "<italic>").replace("&r", "<reset>");
     }
+
     public net.aquiles.neochat.managers.TownyManager getTownyManager() { return townyManager; }
     public java.util.Set<java.util.UUID> getTownyChatToggled() { return townyChatToggled; }
     public boolean isTownyChatEnabled() { return townyChatEnabled; }

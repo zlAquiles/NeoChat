@@ -7,7 +7,7 @@ public class ConsoleFilter implements Filter {
     @Override
     public boolean isLoggable(LogRecord record) {
         String message = record.getMessage();
-        if (message != null && message.contains("issued server command: /neochat viewinv")) {
+        if (message != null && message.contains("issued server command: /viewinv")) {
             return false;
         }
         return true;

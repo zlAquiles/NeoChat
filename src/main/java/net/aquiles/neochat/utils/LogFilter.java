@@ -8,7 +8,7 @@ public class LogFilter extends AbstractFilter {
     public Result filter(LogEvent event) {
         if (event != null && event.getMessage() != null) {
             String message = event.getMessage().getFormattedMessage();
-            if (message != null && message.contains("issued server command: /neochat viewinv")) {
+            if (message != null && message.contains("issued server command: /viewinv")) {
                 return Result.DENY;
             }
         }

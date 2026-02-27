@@ -12,6 +12,8 @@ commands:
     description: Main administration command.
     permission: neochat.admin.reload
     aliases: [ nc ]
+  viewinv:
+    description: Hidden internal command to view inventories.
   chatmute:
     description: Mutes the global chat.
     permission: neochat.admin.mute

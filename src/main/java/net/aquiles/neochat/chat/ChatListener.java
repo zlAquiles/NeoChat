@@ -33,9 +33,42 @@ public class ChatListener implements Listener {
     private final Map<UUID, String> lastMessages = new HashMap<>();
     private final Map<UUID, Long> lastMessageTimes = new HashMap<>();
 
+    private boolean pingEnabled, pingSoundEnabled, antiSwearEnabled, linksEnabled;
+    private String pingPrefix, pingSoundType, swearReplacement, linkTransform;
+    private float pingVolume, pingPitch;
+    private List<Pattern> swearPatterns;
+    private Pattern pingPattern, linkPattern, alphaPattern;
+
     public ChatListener(NeoChat plugin) {
         this.plugin = plugin;
         this.strictMiniMessage = MiniMessage.miniMessage();
+        loadSettings();
+    }
+
+    public void loadSettings() {
+        this.pingEnabled = plugin.getConfig().getBoolean("ping.enable", true);
+        this.pingPrefix = plugin.getConfig().getString("ping.prefix", "@");
+        this.pingPattern = Pattern.compile(Pattern.quote(pingPrefix) + "([a-zA-Z0-9_]{3,16})");
+
+        this.pingSoundEnabled = plugin.getConfig().getBoolean("ping.sound.enable", true);
+        this.pingSoundType = plugin.getConfig().getString("ping.sound.type", "ENTITY_EXPERIENCE_ORB_PICKUP");
+        this.pingVolume = (float) plugin.getConfig().getDouble("ping.sound.volume", 1.0);
+        this.pingPitch = (float) plugin.getConfig().getDouble("ping.sound.pitch", 1.0);
+
+        this.antiSwearEnabled = plugin.getConfig().getBoolean("anti-swear.enable", true);
+        this.swearReplacement = plugin.getConfig().getString("anti-swear.replace-with", "***");
+        this.swearPatterns = new ArrayList<>();
+        for (String word : plugin.getConfig().getStringList("anti-swear.blocked-words")) {
+            swearPatterns.add(Pattern.compile("(?i)\\b" + Pattern.quote(word) + "\\b"));
+        }
+
+        String alphaRegex = plugin.getConfig().getString("alphanumeric-regex", "^[a-zA-Z0-9_.?!^¨%ù*&é\"#'{(\\[\\-|èêë`\\\\çà)\\]=}ûî+<>:²€$/\\\\\\,\\-â@;ô ]+$");
+        this.alphaPattern = Pattern.compile(alphaRegex);
+
+        this.linksEnabled = plugin.getConfig().getBoolean("links.enable", true);
+        String linkRegex = plugin.getConfig().getString("links.regex", "[-a-zA-Z0-9@:%._+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b([-a-zA-Z0-9()@:%_+.~#?&/=]*)");
+        this.linkPattern = Pattern.compile(linkRegex);
+        this.linkTransform = plugin.getConfig().getString("links.transform", "<hover:show_text:'<white>Click para abrir enlace'><click:open_url:'%url%'><aqua>%url%</aqua></click></hover>");
     }
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
@@ -62,7 +95,7 @@ public class ChatListener implements Listener {
             }
         }
 
-        String plainMessage = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(event.message());
+        String plainMessage = PlainTextComponentSerializer.plainText().serialize(event.message());
 
         if (plugin.getConfig().getBoolean("anti-flood.enable", true) && !player.hasPermission(plugin.getConfig().getString("anti-flood.permission-bypass", "neochat.bypass.flood"))) {
             if (plainMessage.length() > plugin.getConfig().getInt("anti-flood.max-message-length", 80)) {
@@ -108,20 +141,14 @@ public class ChatListener implements Listener {
             lastMessageTimes.put(player.getUniqueId(), System.currentTimeMillis());
         }
 
-        if (plugin.getConfig().getBoolean("anti-swear.enable", true)) {
+        if (antiSwearEnabled) {
             String bypassPerm = plugin.getConfig().getString("anti-swear.permission-bypass", "neochat.bypass.swear");
             if (!player.hasPermission(bypassPerm)) {
-                java.util.List<String> blockedWords = plugin.getConfig().getStringList("anti-swear.blocked-words");
-                String replacement = plugin.getConfig().getString("anti-swear.replace-with", "***");
-
-                net.kyori.adventure.text.Component filteredMessage = event.message();
-
-                for (String word : blockedWords) {
-                    java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("(?i)\\b" + java.util.regex.Pattern.quote(word) + "\\b");
-
-                    filteredMessage = filteredMessage.replaceText(net.kyori.adventure.text.TextReplacementConfig.builder()
+                Component filteredMessage = event.message();
+                for (Pattern pattern : swearPatterns) {
+                    filteredMessage = filteredMessage.replaceText(TextReplacementConfig.builder()
                             .match(pattern)
-                            .replacement(replacement)
+                            .replacement(swearReplacement)
                             .build());
                 }
                 event.message(filteredMessage);
@@ -138,15 +165,14 @@ public class ChatListener implements Listener {
         String rawMessage = PlainTextComponentSerializer.plainText().serialize(event.message());
         if (plugin.isTownyChatEnabled() && plugin.getTownyChatToggled().contains(player.getUniqueId())) {
             event.setCancelled(true);
-            String finalMsg = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(event.message());
+            String finalMsg = PlainTextComponentSerializer.plainText().serialize(event.message());
             plugin.getTownyManager().sendTownMessage(player, finalMsg);
             return;
         }
 
         String bypassPermAlhpa = plugin.getConfig().getString("alphanumeric-permission", "neochat.bypass.alphanumeric");
         if (!player.hasPermission(bypassPermAlhpa)) {
-            String alphaRegex = plugin.getConfig().getString("alphanumeric-regex", "^[a-zA-Z0-9_.?!^¨%ù*&é\"#'{(\\[\\-|èêë`\\\\çà)\\]=}ûî+<>:²€$/\\\\\\,\\-â@;ô ]+$");
-            if (!rawMessage.matches(alphaRegex)) {
+            if (!alphaPattern.matcher(rawMessage).matches()) {
                 event.setCancelled(true);
                 player.sendMessage(strictMiniMessage.deserialize(plugin.getMessages().getString("chat-invalid-characters", "<red>Tu mensaje contiene caracteres no permitidos.")));
                 return;
@@ -154,33 +180,24 @@ public class ChatListener implements Listener {
         }
 
         Set<Player> mentionedPlayers = new HashSet<>();
-        String pingPrefix = plugin.getConfig().getString("ping.prefix", "@");
 
-        if (plugin.getConfig().getBoolean("ping.enable", true)) {
-            Pattern pattern = Pattern.compile(Pattern.quote(pingPrefix) + "([a-zA-Z0-9_]{3,16})");
-            Matcher matcher = pattern.matcher(rawMessage);
-
+        if (pingEnabled) {
+            Matcher matcher = pingPattern.matcher(rawMessage);
             while (matcher.find()) {
                 String name = matcher.group(1);
                 Player target = Bukkit.getPlayerExact(name);
-
                 if (target != null && target.isOnline() && player.canSee(target)) {
                     mentionedPlayers.add(target);
                 }
             }
 
-            if (!mentionedPlayers.isEmpty() && plugin.getConfig().getBoolean("ping.sound.enable", true)) {
-                String soundName = plugin.getConfig().getString("ping.sound.type", "ENTITY_EXPERIENCE_ORB_PICKUP");
-                float volume = (float) plugin.getConfig().getDouble("ping.sound.volume", 1.0);
-                float pitch = (float) plugin.getConfig().getDouble("ping.sound.pitch", 1.0);
-
+            if (!mentionedPlayers.isEmpty() && pingSoundEnabled) {
                 try {
-                    Sound sound = Sound.valueOf(soundName.toUpperCase());
+                    Sound sound = Sound.valueOf(pingSoundType.toUpperCase());
                     for (Player p : mentionedPlayers) {
-                        p.playSound(p.getLocation(), sound, volume, pitch);
+                        p.playSound(p.getLocation(), sound, pingVolume, pingPitch);
                     }
                 } catch (IllegalArgumentException e) {
-                    plugin.getLogger().warning("Sonido invalido en config.yml: " + soundName + " - usando default.");
                     for (Player p : mentionedPlayers) {
                         p.playSound(p.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1f);
                     }
@@ -211,7 +228,7 @@ public class ChatListener implements Listener {
             for (String key : plugin.getFormats().getConfigurationSection("formats").getKeys(false)) {
                 String perm = plugin.getFormats().getString("formats." + key + ".permission", "neochat.format." + key);
                 int priority = plugin.getFormats().getInt("formats." + key + ".priority", 999);
-                java.util.List<String> groups = plugin.getFormats().getStringList("formats." + key + ".groups");
+                List<String> groups = plugin.getFormats().getStringList("formats." + key + ".groups");
 
                 boolean hasAccess = player.hasPermission(perm);
 
@@ -245,19 +262,17 @@ public class ChatListener implements Listener {
         if (!hoverText.isEmpty()) hoverText = plugin.translateLegacy(hoverText);
 
         String finalHoverText = hoverText.replace("\n", "<newline>");
-
         final String finalGroupFormat = groupFormat;
         final Component finalPlayerMessage = playerMessageComponent;
 
         if (plugin.getDiscordManager() != null) {
-            String textForDiscord = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(finalPlayerMessage);
+            String textForDiscord = PlainTextComponentSerializer.plainText().serialize(finalPlayerMessage);
             plugin.getDiscordManager().sendMessage(player.getName(), textForDiscord);
         }
 
         event.renderer(new ChatRenderer() {
             @Override
             public @NotNull Component render(@NotNull Player source, @NotNull Component sourceDisplayName, @NotNull Component message, @NotNull Audience viewer) {
-
                 Component viewerMessage = finalPlayerMessage;
 
                 if (!mentionedPlayers.isEmpty()) {
@@ -312,7 +327,6 @@ public class ChatListener implements Listener {
 
         for (Map<?, ?> phMap : placeholders) {
             String name = (String) phMap.get("name");
-
             Object enableObj = phMap.get("enable");
             boolean enabled = enableObj instanceof Boolean ? (Boolean) enableObj : true;
             if (!enabled) continue;
@@ -329,7 +343,7 @@ public class ChatListener implements Listener {
 
             if (!player.hasPermission(permission)) continue;
 
-            java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(regex);
+            Pattern pattern = Pattern.compile(regex);
             if (!pattern.matcher(PlainTextComponentSerializer.plainText().serialize(result)).find()) continue;
 
             if ("item".equalsIgnoreCase(name)) {
@@ -342,21 +356,21 @@ public class ChatListener implements Listener {
                             resultFormat.replace("<amount>", String.valueOf(amount)),
                             Placeholder.component("item", itemName)
                     ).hoverEvent(item.asHoverEvent());
-                    result = result.replaceText(TextReplacementConfig.builder().match(regex).replacement(itemReplacement).build());
+                    result = result.replaceText(TextReplacementConfig.builder().match(pattern).replacement(itemReplacement).build());
                 }
             } else if ("inv".equalsIgnoreCase(name)) {
                 UUID snapshotId = UUID.randomUUID();
                 plugin.getPlayerDataManager().addSnapshot(snapshotId, new net.aquiles.neochat.utils.InventorySnapshot(
                         player.getName(), player.getInventory().getStorageContents(), player.getInventory().getArmorContents(), player.getInventory().getItemInOffHand()));
                 String finalResultText = resultFormat.replace("%id%", snapshotId.toString()).replace("%player%", player.getName());
-                result = result.replaceText(TextReplacementConfig.builder().match(regex).replacement(strictMiniMessage.deserialize(finalResultText)).build());
+                result = result.replaceText(TextReplacementConfig.builder().match(pattern).replacement(strictMiniMessage.deserialize(finalResultText)).build());
 
             } else if ("ender".equalsIgnoreCase(name)) {
                 UUID snapshotId = UUID.randomUUID();
                 plugin.getPlayerDataManager().addSnapshot(snapshotId, new net.aquiles.neochat.utils.InventorySnapshot(
                         player.getName(), net.aquiles.neochat.utils.InventorySnapshot.SnapshotType.ENDERCHEST, player.getEnderChest().getContents()));
                 String finalResultText = resultFormat.replace("%id%", snapshotId.toString()).replace("%player%", player.getName());
-                result = result.replaceText(TextReplacementConfig.builder().match(regex).replacement(strictMiniMessage.deserialize(finalResultText)).build());
+                result = result.replaceText(TextReplacementConfig.builder().match(pattern).replacement(strictMiniMessage.deserialize(finalResultText)).build());
 
             } else if ("shulker".equalsIgnoreCase(name)) {
                 ItemStack handItem = player.getInventory().getItemInMainHand();
@@ -366,7 +380,7 @@ public class ChatListener implements Listener {
                         plugin.getPlayerDataManager().addSnapshot(snapshotId, new net.aquiles.neochat.utils.InventorySnapshot(
                                 player.getName(), net.aquiles.neochat.utils.InventorySnapshot.SnapshotType.SHULKER, shulkerBox.getInventory().getContents()));
                         String finalResultText = resultFormat.replace("%id%", snapshotId.toString()).replace("%player%", player.getName());
-                        result = result.replaceText(TextReplacementConfig.builder().match(regex).replacement(strictMiniMessage.deserialize(finalResultText)).build());
+                        result = result.replaceText(TextReplacementConfig.builder().match(pattern).replacement(strictMiniMessage.deserialize(finalResultText)).build());
                     }
                 }
             } else {
@@ -383,20 +397,15 @@ public class ChatListener implements Listener {
                 }
 
                 result = result.replaceText(TextReplacementConfig.builder()
-                        .match(regex)
+                        .match(pattern)
                         .replacement(strictMiniMessage.deserialize(finalResultText))
                         .build());
             }
         }
 
-        if (plugin.getConfig().getBoolean("links.enable", true)) {
+        if (linksEnabled) {
             String linkPerm = plugin.getConfig().getString("links.permission", "neochat.chat.link");
             if (player.hasPermission(linkPerm)) {
-                String linkRegex = plugin.getConfig().getString("links.regex", "[-a-zA-Z0-9@:%._+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b([-a-zA-Z0-9()@:%_+.~#?&/=]*)");
-                String linkTransform = plugin.getConfig().getString("links.transform", "<hover:show_text:'<white>Click para abrir enlace'><click:open_url:'%url%'><aqua>%url%</aqua></click></hover>");
-
-                java.util.regex.Pattern linkPattern = java.util.regex.Pattern.compile(linkRegex);
-
                 result = result.replaceText(TextReplacementConfig.builder()
                         .match(linkPattern)
                         .replacement((java.util.regex.MatchResult match, net.kyori.adventure.text.TextComponent.Builder builder) -> {

@@ -1,17 +1,25 @@
 package net.aquiles.neochat.commands;
 
 import net.aquiles.neochat.NeoChat;
+import net.aquiles.neochat.utils.InventorySnapshot;
+import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 public class AdminChatCommand implements CommandExecutor, TabCompleter {
 
@@ -61,6 +69,7 @@ public class AdminChatCommand implements CommandExecutor, TabCompleter {
         }
 
         if (command.getName().equalsIgnoreCase("neochat")) {
+
             if (args.length == 1 && args[0].equalsIgnoreCase("reload")) {
                 if (!sender.hasPermission("neochat.admin.reload")) {
                     sender.sendMessage(mm.deserialize(noPermMsg));
