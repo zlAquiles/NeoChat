@@ -150,13 +150,13 @@ custom-rules:
 
 # --- DISCORD WEBHOOK ---
 discord-webhook:
-  enable: true
-  url: "https://discord.com/api/webhooks/1470313491268108482/TquePxwqzPiT4kZdWYIBe7L09mgDX5dohzgaTfi0hRb6NaRaDioXkQwa_0v_sEcRFEDn"
+  enable: false
+  url: ""
   format: "**%player%**: %message%" # Supports Discord Markdown (e.g., ** for bold)
 
-# --- TOWNY CHAT ---
+# --- TOWNY CHAT --- https://modrinth.com/plugin/towny
 towny-chat:
-  enable: true # Requires server restart if changed
+  enable: false # Requires server restart if changed
   format: "&f%townyadvanced_town%<click:suggest_command:'/msg %player_name% '><hover:show_text:'<hover_text>'>&f%player_name%</hover></click> &8» &2<message>"
   hover-message: |-
     <gray>   PLAYER PROFILE
