@@ -66,19 +66,19 @@ public final class NeoChat extends JavaPlugin implements org.bukkit.event.Listen
             new org.bstats.bukkit.Metrics(this, pluginId);
             getLogger().info("Metrics (bStats) enabled.");
         } catch (Exception e) {
-            getLogger().warning("No se pudo inicializar bStats.");
+            getLogger().warning("bStats could not be initialized.");
         }
 
         try {
             org.apache.logging.log4j.core.Logger coreLogger = (org.apache.logging.log4j.core.Logger) org.apache.logging.log4j.LogManager.getRootLogger();
             coreLogger.addFilter(new net.aquiles.neochat.utils.LogFilter());
         } catch (Exception e) {
-            getLogger().warning("No se pudo inyectar el filtro de consola (Log4j).");
+            getLogger().warning("The console filter could not be injected (Log4j).");
         }
 
         if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
             papiEnabled = true;
-            getLogger().info("PlaceholderAPI detectado y activado.");
+            getLogger().info("PlaceholderAPI detected and activated.");
         }
 
         registerListeners();
@@ -88,7 +88,7 @@ public final class NeoChat extends JavaPlugin implements org.bukkit.event.Listen
             townyChatEnabled = true;
             townyManager = new net.aquiles.neochat.managers.TownyManager(this);
             getCommand("tc").setExecutor(new net.aquiles.neochat.commands.TownyChatCommand(this));
-            getLogger().info("Towny Chat detectado y activado correctamente.");
+            getLogger().info("Towny Chat detected and activated.");
         }
         printLogo();
         long took = System.currentTimeMillis() - startTime;
@@ -97,7 +97,7 @@ public final class NeoChat extends JavaPlugin implements org.bukkit.event.Listen
 
     @Override
     public void onDisable() {
-        getLogger().info("NeoChat ha sido desactivado correctamente.");
+        getLogger().info("NeoChat has been successfully deactivated.");
     }
 
     private void registerListeners() {
