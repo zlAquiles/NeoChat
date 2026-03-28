@@ -66,3 +66,4 @@ towny-chat-off: "<aqua><bold>TOWNY</bold> <dark_gray>» <red>You have returned t
 #               UPDATE CHECKER               #
 # ========================================== #
 update-available: "<green>A new update is available for NeoChat! <gray>Current version: <white>%current% <gray>| New version: <white>%new%"
+update-available-join: "<dark_gray>[<aqua>NeoChat<dark_gray>] <green>Update available! <gray>(<white>%current% <gray>-> <white>%new%<gray>)"

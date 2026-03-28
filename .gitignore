@@ -1,0 +1,21 @@
+# Gradle
+.gradle/
+.gradle-tmp/
+build/
+out/
+
+# Maven leftovers
+target/
+dependency-reduced-pom.xml
+
+# IntelliJ / JetBrains
+.idea/
+*.iml
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db

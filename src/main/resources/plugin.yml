@@ -1,12 +1,13 @@
 name: NeoChat
-version: '${project.version}'
+version: '${version}'
 main: net.aquiles.neochat.NeoChat
 api-version: '1.19'
 authors: [ Aquiles ]
 depend: [ ]
-softdepend: [ PlaceholderAPI, ItemsAdder ]
+softdepend: [ PlaceholderAPI, ItemsAdder, Towny ]
 description: Advanced plugin for chat formatting, interactivity, and placeholders.
 website: discord.gg/Wq9AHJP6VJ
+folia-supported: true
 commands:
   neochat:
     description: Main administration command.

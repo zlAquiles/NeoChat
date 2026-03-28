@@ -84,7 +84,7 @@ chat-placeholders:
 
 # --- ANTI-SPAM SYSTEM ---
 chat-cooldown:
-  enable: true
+  enable: false
   time: 3 # Cooldown time in seconds
   permission-bypass: "neochat.bypass.cooldown"
 
@@ -97,7 +97,7 @@ chat-cooldowns:
 
 # --- ANTI-FLOOD ---
 anti-flood:
-  enable: true
+  enable: false
   max-message-length: 80
   block-repeated-chars: true # Blocks things like "Hoooooooola" (more than 4 identical characters)
   alert-staff: true
@@ -105,20 +105,20 @@ anti-flood:
 
 # --- SIMILARITY CHECK ---
 similarity-check:
-  enable: true
+  enable: false
   cache-time-seconds: 15
   max-similarity-percent: 80 # If the message is 80% or more similar to the previous one, it gets blocked
   permission-bypass: "neochat.bypass.similarity"
 
 # --- ANTI-CAPS ---
 anti-caps:
-  enable: true
+  enable: false
   max-uppercase: 5 # Maximum number of uppercase letters allowed per message
   permission-bypass: "neochat.bypass.caps"
 
 # --- ANTI-SWEAR SYSTEM ---
 anti-swear:
-  enable: true
+  enable: false
   replace-with: "***"
   permission-bypass: "neochat.bypass.swear"
   blocked-words:

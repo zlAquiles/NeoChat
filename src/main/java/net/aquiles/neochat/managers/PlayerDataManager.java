@@ -5,22 +5,26 @@ import com.google.common.cache.CacheBuilder;
 import net.aquiles.neochat.NeoChat;
 import net.aquiles.neochat.utils.InventorySnapshot;
 import org.bukkit.entity.Player;
-import java.util.*;
+
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 public class PlayerDataManager {
 
-    private final Map<UUID, UUID> lastMessaged = new HashMap<>();
-    private final Set<UUID> pmToggledOff = new HashSet<>();
-    private final Set<UUID> spyEnabled = new HashSet<>();
+    private final Map<UUID, UUID> lastMessaged = new ConcurrentHashMap<>();
+    private final Set<UUID> pmToggledOff = ConcurrentHashMap.newKeySet();
+    private final Set<UUID> spyEnabled = ConcurrentHashMap.newKeySet();
 
     private final Cache<UUID, InventorySnapshot> inventorySnapshots = CacheBuilder.newBuilder()
             .expireAfterWrite(5, TimeUnit.MINUTES)
             .build();
 
-    private final Set<UUID> viewingSnapshot = new HashSet<>();
-    private final Map<UUID, Set<UUID>> ignoredPlayers = new HashMap<>();
-    private final Set<UUID> ignoreAllEnabled = new HashSet<>();
+    private final Set<UUID> viewingSnapshot = ConcurrentHashMap.newKeySet();
+    private final Map<UUID, Set<UUID>> ignoredPlayers = new ConcurrentHashMap<>();
+    private final Set<UUID> ignoreAllEnabled = ConcurrentHashMap.newKeySet();
 
     public PlayerDataManager(NeoChat neoChat) {
     }
@@ -76,11 +80,11 @@ public class PlayerDataManager {
     }
 
     public Set<UUID> getSpies() {
-        return spyEnabled;
+        return Set.copyOf(spyEnabled);
     }
 
     public boolean toggleIgnore(Player player, Player target) {
-        ignoredPlayers.putIfAbsent(player.getUniqueId(), new HashSet<>());
+        ignoredPlayers.putIfAbsent(player.getUniqueId(), ConcurrentHashMap.newKeySet());
         Set<UUID> ignores = ignoredPlayers.get(player.getUniqueId());
 
         if (ignores.contains(target.getUniqueId())) {

@@ -8,20 +8,24 @@ import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 
-public class MessageCommand implements CommandExecutor, org.bukkit.command.TabCompleter {
+public class MessageCommand implements CommandExecutor, TabCompleter {
 
     private final NeoChat plugin;
-    private final MiniMessage mm;
+    private final MiniMessage miniMessage;
 
     public MessageCommand(NeoChat plugin) {
         this.plugin = plugin;
-        this.mm = MiniMessage.miniMessage();
+        this.miniMessage = MiniMessage.miniMessage();
     }
 
     @Override
@@ -32,127 +36,145 @@ public class MessageCommand implements CommandExecutor, org.bukkit.command.TabCo
         }
 
         if (!plugin.getConfig().getBoolean("private-messages.enable", true)) {
-            player.sendMessage(mm.deserialize("<red>El sistema de mensajes privados está desactivado."));
+            plugin.sendMessage(player, miniMessage.deserialize("<red>El sistema de mensajes privados esta desactivado."));
             return true;
         }
 
-        String cmdName = command.getName().toLowerCase();
-        String noPermMsg = plugin.getMessages().getString("no-permission", "<red>No tienes permisos.");
+        String commandName = command.getName().toLowerCase();
+        String noPermission = plugin.getMessages().getString("no-permission", "<red>No tienes permisos.");
 
-        if (cmdName.equals("togglemsg")) {
+        if (commandName.equals("togglemsg")) {
             if (!player.hasPermission("neochat.pm.toggle")) {
-                player.sendMessage(mm.deserialize(noPermMsg));
+                plugin.sendMessage(player, miniMessage.deserialize(noPermission));
                 return true;
             }
-            boolean isNowEnabled = plugin.getPlayerDataManager().togglePM(player);
-            String msgKey = isNowEnabled ? "pm-toggle-on" : "pm-toggle-off";
-            player.sendMessage(mm.deserialize(plugin.getMessages().getString(msgKey, "<gray>Estado cambiado.")));
+
+            boolean enabled = plugin.getPlayerDataManager().togglePM(player);
+            String key = enabled ? "pm-toggle-on" : "pm-toggle-off";
+            plugin.sendMessage(player, miniMessage.deserialize(plugin.getMessages().getString(key, "<gray>Estado cambiado.")));
             return true;
         }
 
-        if (cmdName.equals("socialspy")) {
+        if (commandName.equals("socialspy")) {
             if (!player.hasPermission("neochat.admin.spy")) {
-                player.sendMessage(mm.deserialize(noPermMsg));
+                plugin.sendMessage(player, miniMessage.deserialize(noPermission));
                 return true;
             }
-            boolean isSpyOn = plugin.getPlayerDataManager().toggleSpy(player);
-            String msgKey = isSpyOn ? "pm-spy-on" : "pm-spy-off";
-            player.sendMessage(mm.deserialize(plugin.getMessages().getString(msgKey, "<gray>SocialSpy cambiado.")));
+
+            boolean enabled = plugin.getPlayerDataManager().toggleSpy(player);
+            String key = enabled ? "pm-spy-on" : "pm-spy-off";
+            plugin.sendMessage(player, miniMessage.deserialize(plugin.getMessages().getString(key, "<gray>SocialSpy cambiado.")));
             return true;
         }
 
-        if (cmdName.equals("msg") || cmdName.equals("reply")) {
-            if (!player.hasPermission("neochat.pm.use")) {
-                player.sendMessage(mm.deserialize(noPermMsg));
-                return true;
-            }
+        if (!commandName.equals("msg") && !commandName.equals("reply")) {
+            return false;
+        }
 
-            if (plugin.getPlayerDataManager().hasPMsDisabled(player)) {
-                player.sendMessage(mm.deserialize(plugin.getMessages().getString("pm-self-disabled", "<red>Tienes los mensajes desactivados.")));
-                return true;
-            }
-
-            Player target = null;
-            String messageRaw = "";
-
-            if (cmdName.equals("msg")) {
-                if (args.length < 2) {
-                    player.sendMessage(mm.deserialize("<red>Uso: /" + label + " <jugador> <mensaje>"));
-                    return true;
-                }
-                target = Bukkit.getPlayer(args[0]);
-                messageRaw = String.join(" ", Arrays.copyOfRange(args, 1, args.length));
-            } else {
-                if (args.length < 1) {
-                    player.sendMessage(mm.deserialize("<red>Uso: /" + label + " <mensaje>"));
-                    return true;
-                }
-                UUID targetId = plugin.getPlayerDataManager().getReplyTarget(player);
-                if (targetId != null) {
-                    target = Bukkit.getPlayer(targetId);
-                }
-                messageRaw = String.join(" ", args);
-            }
-
-            if (target == null || !target.isOnline() || !player.canSee(target)) {
-                player.sendMessage(mm.deserialize(plugin.getMessages().getString(cmdName.equals("reply") ? "pm-no-reply" : "pm-player-not-found", "<red>Jugador no encontrado.")));
-                return true;
-            }
-
-            if (target.equals(player)) {
-                player.sendMessage(mm.deserialize(plugin.getMessages().getString("pm-cannot-message-self", "<red>No puedes hablarte a ti mismo.")));
-                return true;
-            }
-
-            if (plugin.getPlayerDataManager().hasPMsDisabled(target) && !player.hasPermission("neochat.pm.bypass")) {
-                player.sendMessage(mm.deserialize(plugin.getMessages().getString("pm-target-disabled", "<red>Ese jugador tiene los mensajes desactivados.")));
-                return true;
-            }
-
-            if (plugin.getPlayerDataManager().isIgnoring(target, player)) {
-                player.sendMessage(mm.deserialize(plugin.getMessages().getString("ignore-target-ignoring-you", "<red>No puedes enviar un mensaje a este jugador porque te ha ignorado.")));
-                return true;
-            }
-
-            plugin.getPlayerDataManager().setReplyTarget(player, target);
-
-            Component parsedMessage = player.hasPermission("neochat.chat.color") ? mm.deserialize(messageRaw) : Component.text(messageRaw);
-
-            String sendFormat = plugin.getMessages().getString("pm-format-send", "<gray>[Yo -> %target%] <white><message>")
-                    .replace("%target%", target.getName());
-            player.sendMessage(mm.deserialize(sendFormat, Placeholder.component("message", parsedMessage)));
-
-            String receiveFormat = plugin.getMessages().getString("pm-format-receive", "<gray>[%sender% -> Yo] <white><message>")
-                    .replace("%sender%", player.getName());
-            target.sendMessage(mm.deserialize(receiveFormat, Placeholder.component("message", parsedMessage)));
-
-            String spyFormatStr = plugin.getMessages().getString("pm-format-spy", "<dark_gray>[Spy] %sender% -> %target%: <message>")
-                    .replace("%sender%", player.getName())
-                    .replace("%target%", target.getName());
-            Component spyComponent = mm.deserialize(spyFormatStr, Placeholder.component("message", parsedMessage));
-
-            for (UUID spyId : plugin.getPlayerDataManager().getSpies()) {
-                Player spyPlayer = Bukkit.getPlayer(spyId);
-                if (spyPlayer != null && spyPlayer.isOnline() && !spyPlayer.equals(player) && !spyPlayer.equals(target)) {
-                    spyPlayer.sendMessage(spyComponent);
-                }
-            }
+        if (!player.hasPermission("neochat.pm.use")) {
+            plugin.sendMessage(player, miniMessage.deserialize(noPermission));
             return true;
         }
 
-        return false;
+        if (plugin.getPlayerDataManager().hasPMsDisabled(player)) {
+            plugin.sendMessage(player, miniMessage.deserialize(plugin.getMessages().getString("pm-self-disabled", "<red>Tienes los mensajes desactivados.")));
+            return true;
+        }
+
+        Player target;
+        String rawMessage;
+
+        if (commandName.equals("msg")) {
+            if (args.length < 2) {
+                plugin.sendMessage(player, miniMessage.deserialize("<red>Uso: /" + label + " <jugador> <mensaje>"));
+                return true;
+            }
+
+            target = Bukkit.getPlayer(args[0]);
+            rawMessage = String.join(" ", Arrays.copyOfRange(args, 1, args.length));
+        } else {
+            if (args.length < 1) {
+                plugin.sendMessage(player, miniMessage.deserialize("<red>Uso: /" + label + " <mensaje>"));
+                return true;
+            }
+
+            UUID targetId = plugin.getPlayerDataManager().getReplyTarget(player);
+            target = targetId == null ? null : Bukkit.getPlayer(targetId);
+            rawMessage = String.join(" ", args);
+        }
+
+        if (target == null || !plugin.callForEntity(player, () -> player.canSee(target))) {
+            String key = commandName.equals("reply") ? "pm-no-reply" : "pm-player-not-found";
+            plugin.sendMessage(player, miniMessage.deserialize(plugin.getMessages().getString(key, "<red>Jugador no encontrado.")));
+            return true;
+        }
+
+        if (target.equals(player)) {
+            plugin.sendMessage(player, miniMessage.deserialize(plugin.getMessages().getString("pm-cannot-message-self", "<red>No puedes hablarte a ti mismo.")));
+            return true;
+        }
+
+        if (plugin.getPlayerDataManager().hasPMsDisabled(target) && !player.hasPermission("neochat.pm.bypass")) {
+            plugin.sendMessage(player, miniMessage.deserialize(plugin.getMessages().getString("pm-target-disabled", "<red>Ese jugador tiene los mensajes desactivados.")));
+            return true;
+        }
+
+        if (plugin.getPlayerDataManager().isIgnoring(target, player)) {
+            plugin.sendMessage(player, miniMessage.deserialize(plugin.getMessages().getString("ignore-target-ignoring-you", "<red>No puedes enviar un mensaje a este jugador porque te ha ignorado.")));
+            return true;
+        }
+
+        plugin.getPlayerDataManager().setReplyTarget(player, target);
+
+        Component parsedMessage = player.hasPermission("neochat.chat.color")
+                ? miniMessage.deserialize(rawMessage)
+                : Component.text(rawMessage);
+
+        String sendFormat = plugin.getMessages().getString("pm-format-send", "<gray>[Yo -> %target%] <white><message>")
+                .replace("%target%", target.getName());
+        plugin.sendMessage(player, miniMessage.deserialize(sendFormat, Placeholder.component("message", parsedMessage)));
+
+        String receiveFormat = plugin.getMessages().getString("pm-format-receive", "<gray>[%sender% -> Yo] <white><message>")
+                .replace("%sender%", player.getName());
+        plugin.sendMessage(target, miniMessage.deserialize(receiveFormat, Placeholder.component("message", parsedMessage)));
+
+        String spyFormat = plugin.getMessages().getString("pm-format-spy", "<dark_gray>[Spy] %sender% -> %target%: <message>")
+                .replace("%sender%", player.getName())
+                .replace("%target%", target.getName());
+        Component spyComponent = miniMessage.deserialize(spyFormat, Placeholder.component("message", parsedMessage));
+
+        for (UUID spyId : plugin.getPlayerDataManager().getSpies()) {
+            Player spyPlayer = Bukkit.getPlayer(spyId);
+            if (spyPlayer != null && !spyPlayer.equals(player) && !spyPlayer.equals(target)) {
+                plugin.sendMessage(spyPlayer, spyComponent);
+            }
+        }
+
+        return true;
     }
 
     @Override
-    public @org.jetbrains.annotations.Nullable java.util.List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
-        java.util.List<String> completions = new java.util.ArrayList<>();
+    public @Nullable List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
+        if (!command.getName().equalsIgnoreCase("msg") || args.length != 1) {
+            return List.of();
+        }
 
-        if (command.getName().equalsIgnoreCase("msg") && args.length == 1) {
-            for (Player p : Bukkit.getOnlinePlayers()) {
-                if (sender instanceof Player player && !player.canSee(p)) continue;
-                if (p.getName().toLowerCase().startsWith(args[0].toLowerCase())) {
-                    completions.add(p.getName());
-                }
+        String prefix = args[0].toLowerCase();
+        if (sender instanceof Player player) {
+            return plugin.callForEntity(player, () -> collectVisiblePlayers(player, prefix));
+        }
+
+        return collectVisiblePlayers(null, prefix);
+    }
+
+    private List<String> collectVisiblePlayers(Player viewer, String prefix) {
+        List<String> completions = new ArrayList<>();
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            if (viewer != null && !viewer.canSee(online)) {
+                continue;
+            }
+            if (online.getName().toLowerCase().startsWith(prefix)) {
+                completions.add(online.getName());
             }
         }
         return completions;

@@ -3,7 +3,6 @@ package net.aquiles.neochat.chat;
 import io.papermc.paper.chat.ChatRenderer;
 import io.papermc.paper.event.player.AsyncChatEvent;
 import net.aquiles.neochat.NeoChat;
-import me.clip.placeholderapi.PlaceholderAPI;
 import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextReplacementConfig;
@@ -21,7 +20,13 @@ import org.bukkit.event.Listener;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -29,9 +34,9 @@ public class ChatListener implements Listener {
 
     private final NeoChat plugin;
     private final MiniMessage strictMiniMessage;
-    private final Map<UUID, Long> cooldowns = new HashMap<>();
-    private final Map<UUID, String> lastMessages = new HashMap<>();
-    private final Map<UUID, Long> lastMessageTimes = new HashMap<>();
+    private final Map<UUID, Long> cooldowns = new ConcurrentHashMap<>();
+    private final Map<UUID, String> lastMessages = new ConcurrentHashMap<>();
+    private final Map<UUID, Long> lastMessageTimes = new ConcurrentHashMap<>();
 
     private boolean pingEnabled, pingSoundEnabled, antiSwearEnabled, linksEnabled;
     private String pingPrefix, pingSoundType, swearReplacement, linkTransform;
@@ -62,7 +67,7 @@ public class ChatListener implements Listener {
             swearPatterns.add(Pattern.compile("(?i)\\b" + Pattern.quote(word) + "\\b"));
         }
 
-        String alphaRegex = plugin.getConfig().getString("alphanumeric-regex", "^[a-zA-Z0-9_.?!^¨%ù*&é\"#'{(\\[\\-|èêë`\\\\çà)\\]=}ûî+<>:²€$/\\\\\\,\\-â@;ô ]+$");
+        String alphaRegex = plugin.getConfig().getString("alphanumeric-regex", "^[\\p{L}\\p{N}_.?!^%&\\\"#'{}()\\[\\]=+<>:$/\\\\,@;\\- ]+$");
         this.alphaPattern = Pattern.compile(alphaRegex);
 
         this.linksEnabled = plugin.getConfig().getBoolean("links.enable", true);
@@ -73,7 +78,6 @@ public class ChatListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onPlayerChat(AsyncChatEvent event) {
-
         Player player = event.getPlayer();
 
         if (plugin.getConfig().getBoolean("chat-cooldown.enable", true)) {
@@ -86,9 +90,9 @@ public class ChatListener implements Listener {
 
                 if (timeLeft > 0) {
                     event.setCancelled(true);
-                    String msg = plugin.getMessages().getString("chat-cooldown-message", "<red>¡Espera <time> segundos!")
+                    String msg = plugin.getMessages().getString("chat-cooldown-message", "<red>Espera <time> segundos!")
                             .replace("<time>", String.valueOf((float) timeLeft / 1000).replaceAll("\\.?0*$", ""));
-                    player.sendMessage(strictMiniMessage.deserialize(msg));
+                    plugin.sendMessage(player, strictMiniMessage.deserialize(msg));
                     return;
                 }
                 cooldowns.put(player.getUniqueId(), currentTime);
@@ -100,15 +104,15 @@ public class ChatListener implements Listener {
         if (plugin.getConfig().getBoolean("anti-flood.enable", true) && !player.hasPermission(plugin.getConfig().getString("anti-flood.permission-bypass", "neochat.bypass.flood"))) {
             if (plainMessage.length() > plugin.getConfig().getInt("anti-flood.max-message-length", 80)) {
                 event.setCancelled(true);
-                player.sendMessage(strictMiniMessage.deserialize(plugin.getMessages().getString("chat-flood-length", "<red>Mensaje muy largo.")));
+                plugin.sendMessage(player, strictMiniMessage.deserialize(plugin.getMessages().getString("chat-flood-length", "<red>Mensaje muy largo.")));
                 return;
             }
             if (plugin.getConfig().getBoolean("anti-flood.block-repeated-chars", true) && plainMessage.matches(".*(.)\\1{4,}.*")) {
                 event.setCancelled(true);
-                player.sendMessage(strictMiniMessage.deserialize(plugin.getMessages().getString("chat-flood-chars", "<red>No repitas caracteres.")));
+                plugin.sendMessage(player, strictMiniMessage.deserialize(plugin.getMessages().getString("chat-flood-chars", "<red>No repitas caracteres.")));
                 if (plugin.getConfig().getBoolean("anti-flood.alert-staff", true)) {
                     String alert = plugin.getMessages().getString("staff-alert-flood", "<red>%player% hizo flood.").replace("%player%", player.getName());
-                    Bukkit.broadcast(strictMiniMessage.deserialize(alert), "neochat.admin");
+                    plugin.broadcast(strictMiniMessage.deserialize(alert), "neochat.admin");
                 }
                 return;
             }
@@ -121,7 +125,7 @@ public class ChatListener implements Listener {
             }
             if (capsCount > plugin.getConfig().getInt("anti-caps.max-uppercase", 5)) {
                 event.setCancelled(true);
-                player.sendMessage(strictMiniMessage.deserialize(plugin.getMessages().getString("chat-caps", "<red>Demasiadas mayúsculas.")));
+                plugin.sendMessage(player, strictMiniMessage.deserialize(plugin.getMessages().getString("chat-caps", "<red>Demasiadas mayusculas.")));
                 return;
             }
         }
@@ -133,7 +137,7 @@ public class ChatListener implements Listener {
                 double similarity = calculateSimilarity(plainMessage.toLowerCase(), lastMsg.toLowerCase());
                 if ((similarity * 100) >= plugin.getConfig().getInt("similarity-check.max-similarity-percent", 80)) {
                     event.setCancelled(true);
-                    player.sendMessage(strictMiniMessage.deserialize(plugin.getMessages().getString("chat-similar", "<red>Mensaje muy similar al anterior.")));
+                    plugin.sendMessage(player, strictMiniMessage.deserialize(plugin.getMessages().getString("chat-similar", "<red>Mensaje muy similar al anterior.")));
                     return;
                 }
             }
@@ -157,49 +161,92 @@ public class ChatListener implements Listener {
 
         if (plugin.isChatMuted() && !player.hasPermission("neochat.bypass.mute")) {
             event.setCancelled(true);
-            String mutedMsg = plugin.getMessages().getString("chat-is-muted", "<red>El chat está silenciado.");
-            player.sendMessage(strictMiniMessage.deserialize(mutedMsg));
+            String mutedMsg = plugin.getMessages().getString("chat-is-muted", "<red>El chat esta silenciado.");
+            plugin.sendMessage(player, strictMiniMessage.deserialize(mutedMsg));
             return;
         }
 
         String rawMessage = PlainTextComponentSerializer.plainText().serialize(event.message());
         if (plugin.isTownyChatEnabled() && plugin.getTownyChatToggled().contains(player.getUniqueId())) {
             event.setCancelled(true);
-            String finalMsg = PlainTextComponentSerializer.plainText().serialize(event.message());
-            plugin.getTownyManager().sendTownMessage(player, finalMsg);
+            plugin.getTownyManager().sendTownMessage(player, rawMessage);
             return;
         }
 
         String bypassPermAlhpa = plugin.getConfig().getString("alphanumeric-permission", "neochat.bypass.alphanumeric");
-        if (!player.hasPermission(bypassPermAlhpa)) {
-            if (!alphaPattern.matcher(rawMessage).matches()) {
-                event.setCancelled(true);
-                player.sendMessage(strictMiniMessage.deserialize(plugin.getMessages().getString("chat-invalid-characters", "<red>Tu mensaje contiene caracteres no permitidos.")));
-                return;
-            }
+        if (!player.hasPermission(bypassPermAlhpa) && !alphaPattern.matcher(rawMessage).matches()) {
+            event.setCancelled(true);
+            plugin.sendMessage(player, strictMiniMessage.deserialize(plugin.getMessages().getString("chat-invalid-characters", "<red>Tu mensaje contiene caracteres no permitidos.")));
+            return;
         }
 
-        Set<Player> mentionedPlayers = new HashSet<>();
+        PreparedChat preparedChat = plugin.callForEntity(player, () -> buildPreparedChat(player, rawMessage));
+        final Map<UUID, String> mentionedPlayers = preparedChat.mentionedPlayers();
+        final String finalHoverText = preparedChat.hoverText();
+        final String finalGroupFormat = preparedChat.groupFormat();
+        final Component finalPlayerMessage = preparedChat.playerMessage();
+
+        if (plugin.getDiscordManager() != null) {
+            String textForDiscord = PlainTextComponentSerializer.plainText().serialize(finalPlayerMessage);
+            plugin.getDiscordManager().sendMessage(player.getName(), textForDiscord);
+        }
+
+        event.renderer(new ChatRenderer() {
+            @Override
+            public @NotNull Component render(@NotNull Player source, @NotNull Component sourceDisplayName, @NotNull Component message, @NotNull Audience viewer) {
+                Component viewerMessage = finalPlayerMessage;
+
+                if (!mentionedPlayers.isEmpty()) {
+                    for (Map.Entry<UUID, String> mentioned : mentionedPlayers.entrySet()) {
+                        String rawMention = pingPrefix + mentioned.getValue();
+                        boolean isReceiver = viewer instanceof Player && ((Player) viewer).getUniqueId().equals(mentioned.getKey());
+
+                        String formatConfig = isReceiver
+                                ? plugin.getConfig().getString("ping.format.receiver", "<red>%name%</red>")
+                                : plugin.getConfig().getString("ping.format.others", "<white>%name%</white>");
+
+                        Component replacement = strictMiniMessage.deserialize(formatConfig.replace("%name%", rawMention));
+
+                        viewerMessage = viewerMessage.replaceText(TextReplacementConfig.builder()
+                                .matchLiteral(rawMention)
+                                .replacement(replacement)
+                                .build());
+                    }
+                }
+
+                return strictMiniMessage.deserialize(
+                        finalGroupFormat,
+                        Placeholder.parsed("hover_text", finalHoverText),
+                        Placeholder.component("message", viewerMessage)
+                );
+            }
+        });
+    }
+
+    private PreparedChat buildPreparedChat(Player player, String rawMessage) {
+        Map<UUID, String> mentionedPlayers = new LinkedHashMap<>();
+        Map<UUID, Player> pingTargets = new LinkedHashMap<>();
 
         if (pingEnabled) {
             Matcher matcher = pingPattern.matcher(rawMessage);
             while (matcher.find()) {
                 String name = matcher.group(1);
                 Player target = Bukkit.getPlayerExact(name);
-                if (target != null && target.isOnline() && player.canSee(target)) {
-                    mentionedPlayers.add(target);
+                if (target != null && player.canSee(target)) {
+                    mentionedPlayers.putIfAbsent(target.getUniqueId(), target.getName());
+                    pingTargets.putIfAbsent(target.getUniqueId(), target);
                 }
             }
 
-            if (!mentionedPlayers.isEmpty() && pingSoundEnabled) {
+            if (!pingTargets.isEmpty() && pingSoundEnabled) {
                 try {
                     Sound sound = Sound.valueOf(pingSoundType.toUpperCase());
-                    for (Player p : mentionedPlayers) {
-                        p.playSound(p.getLocation(), sound, pingVolume, pingPitch);
+                    for (Player target : pingTargets.values()) {
+                        plugin.playSound(target, sound, pingVolume, pingPitch);
                     }
                 } catch (IllegalArgumentException e) {
-                    for (Player p : mentionedPlayers) {
-                        p.playSound(p.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1f);
+                    for (Player target : pingTargets.values()) {
+                        plugin.playSound(target, Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1f);
                     }
                 }
             }
@@ -217,11 +264,10 @@ public class ChatListener implements Listener {
 
         MiniMessage playerMessageParser = MiniMessage.builder().tags(resolverBuilder.build()).build();
         Component playerMessageComponent = playerMessageParser.deserialize(rawMessage);
-
         playerMessageComponent = applyPlaceholders(player, playerMessageComponent);
 
         int highestPriority = Integer.MAX_VALUE;
-        String groupFormat = "<gray>%player_name% <dark_gray>» <reset><message>";
+        String groupFormat = "<gray>%player_name% <dark_gray>\u00BB <reset><message>";
         String hoverText = "";
 
         if (plugin.getFormats() != null && plugin.getFormats().contains("formats")) {
@@ -252,54 +298,23 @@ public class ChatListener implements Listener {
         groupFormat = groupFormat.replace("%player_name%", player.getName());
 
         if (plugin.isPapiEnabled()) {
-            groupFormat = PlaceholderAPI.setPlaceholders(player, groupFormat);
+            groupFormat = plugin.applyPapiPlaceholders(player, groupFormat);
             if (!hoverText.isEmpty()) {
-                hoverText = PlaceholderAPI.setPlaceholders(player, hoverText);
+                hoverText = plugin.applyPapiPlaceholders(player, hoverText);
             }
         }
 
         groupFormat = plugin.translateLegacy(groupFormat);
-        if (!hoverText.isEmpty()) hoverText = plugin.translateLegacy(hoverText);
-
-        String finalHoverText = hoverText.replace("\n", "<newline>");
-        final String finalGroupFormat = groupFormat;
-        final Component finalPlayerMessage = playerMessageComponent;
-
-        if (plugin.getDiscordManager() != null) {
-            String textForDiscord = PlainTextComponentSerializer.plainText().serialize(finalPlayerMessage);
-            plugin.getDiscordManager().sendMessage(player.getName(), textForDiscord);
+        if (!hoverText.isEmpty()) {
+            hoverText = plugin.translateLegacy(hoverText);
         }
 
-        event.renderer(new ChatRenderer() {
-            @Override
-            public @NotNull Component render(@NotNull Player source, @NotNull Component sourceDisplayName, @NotNull Component message, @NotNull Audience viewer) {
-                Component viewerMessage = finalPlayerMessage;
-
-                if (!mentionedPlayers.isEmpty()) {
-                    for (Player mentioned : mentionedPlayers) {
-                        String rawMention = pingPrefix + mentioned.getName();
-                        boolean isReceiver = viewer instanceof Player && ((Player) viewer).getUniqueId().equals(mentioned.getUniqueId());
-
-                        String formatConfig = isReceiver
-                                ? plugin.getConfig().getString("ping.format.receiver", "<red>%name%</red>")
-                                : plugin.getConfig().getString("ping.format.others", "<white>%name%</white>");
-
-                        Component replacement = strictMiniMessage.deserialize(formatConfig.replace("%name%", rawMention));
-
-                        viewerMessage = viewerMessage.replaceText(TextReplacementConfig.builder()
-                                .matchLiteral(rawMention)
-                                .replacement(replacement)
-                                .build());
-                    }
-                }
-
-                return strictMiniMessage.deserialize(
-                        finalGroupFormat,
-                        Placeholder.parsed("hover_text", finalHoverText),
-                        Placeholder.component("message", viewerMessage)
-                );
-            }
-        });
+        return new PreparedChat(
+                Collections.unmodifiableMap(new LinkedHashMap<>(mentionedPlayers)),
+                playerMessageComponent,
+                groupFormat,
+                hoverText.replace("\n", "<newline>")
+        );
     }
 
     private double calculateSimilarity(String s1, String s2) {
@@ -350,8 +365,9 @@ public class ChatListener implements Listener {
                 ItemStack item = player.getInventory().getItemInMainHand();
                 if (item != null && !item.getType().isAir()) {
                     int amount = item.getAmount();
-                    Component itemName = item.getItemMeta() != null && item.getItemMeta().hasDisplayName() ?
-                            item.getItemMeta().displayName() : Component.translatable(item.getType().translationKey());
+                    Component itemName = item.getItemMeta() != null && item.getItemMeta().hasDisplayName()
+                            ? item.getItemMeta().displayName()
+                            : Component.translatable(item.getType().translationKey());
                     Component itemReplacement = strictMiniMessage.deserialize(
                             resultFormat.replace("<amount>", String.valueOf(amount)),
                             Placeholder.component("item", itemName)
@@ -364,14 +380,12 @@ public class ChatListener implements Listener {
                         player.getName(), player.getInventory().getStorageContents(), player.getInventory().getArmorContents(), player.getInventory().getItemInOffHand()));
                 String finalResultText = resultFormat.replace("%id%", snapshotId.toString()).replace("%player%", player.getName());
                 result = result.replaceText(TextReplacementConfig.builder().match(pattern).replacement(strictMiniMessage.deserialize(finalResultText)).build());
-
             } else if ("ender".equalsIgnoreCase(name)) {
                 UUID snapshotId = UUID.randomUUID();
                 plugin.getPlayerDataManager().addSnapshot(snapshotId, new net.aquiles.neochat.utils.InventorySnapshot(
                         player.getName(), net.aquiles.neochat.utils.InventorySnapshot.SnapshotType.ENDERCHEST, player.getEnderChest().getContents()));
                 String finalResultText = resultFormat.replace("%id%", snapshotId.toString()).replace("%player%", player.getName());
                 result = result.replaceText(TextReplacementConfig.builder().match(pattern).replacement(strictMiniMessage.deserialize(finalResultText)).build());
-
             } else if ("shulker".equalsIgnoreCase(name)) {
                 ItemStack handItem = player.getInventory().getItemInMainHand();
                 if (handItem != null && handItem.getType().name().endsWith("SHULKER_BOX")) {
@@ -393,7 +407,7 @@ public class ChatListener implements Listener {
                         .replace("%player%", player.getName());
 
                 if (plugin.isPapiEnabled()) {
-                    finalResultText = me.clip.placeholderapi.PlaceholderAPI.setPlaceholders(player, finalResultText);
+                    finalResultText = plugin.applyPapiPlaceholders(player, finalResultText);
                 }
 
                 result = result.replaceText(TextReplacementConfig.builder()
@@ -418,5 +432,35 @@ public class ChatListener implements Listener {
         }
 
         return result;
+    }
+
+    private static final class PreparedChat {
+        private final Map<UUID, String> mentionedPlayers;
+        private final Component playerMessage;
+        private final String groupFormat;
+        private final String hoverText;
+
+        private PreparedChat(Map<UUID, String> mentionedPlayers, Component playerMessage, String groupFormat, String hoverText) {
+            this.mentionedPlayers = mentionedPlayers;
+            this.playerMessage = playerMessage;
+            this.groupFormat = groupFormat;
+            this.hoverText = hoverText;
+        }
+
+        private Map<UUID, String> mentionedPlayers() {
+            return mentionedPlayers;
+        }
+
+        private Component playerMessage() {
+            return playerMessage;
+        }
+
+        private String groupFormat() {
+            return groupFormat;
+        }
+
+        private String hoverText() {
+            return hoverText;
+        }
     }
 }

@@ -1,8 +1,6 @@
 package net.aquiles.neochat.utils;
 
 import net.aquiles.neochat.NeoChat;
-import org.bukkit.Bukkit;
-
 import java.io.InputStream;
 import java.net.URL;
 import java.util.Scanner;
@@ -19,7 +17,7 @@ public class UpdateChecker {
     }
 
     public void getVersion(final Consumer<String> consumer) {
-        Bukkit.getScheduler().runTaskAsynchronously(this.plugin, () -> {
+        plugin.runAsync(() -> {
             try (InputStream inputStream = new URL(this.url).openStream();
                  Scanner scanner = new Scanner(inputStream)) {
                 if (scanner.hasNext()) {

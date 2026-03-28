@@ -1,33 +1,52 @@
 package net.aquiles.neochat;
 
+import me.clip.placeholderapi.PlaceholderAPI;
 import net.aquiles.neochat.chat.ChatListener;
 import net.aquiles.neochat.commands.AdminChatCommand;
 import net.aquiles.neochat.commands.IgnoreCommand;
 import net.aquiles.neochat.commands.MessageCommand;
 import net.aquiles.neochat.gui.GUIListener;
 import net.aquiles.neochat.managers.PlayerDataManager;
+import net.aquiles.neochat.utils.FoliaSupport;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
+import org.bukkit.Sound;
+import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class NeoChat extends JavaPlugin implements org.bukkit.event.Listener {
+
+    private static final String UPDATE_URL = "https://modrinth.com/plugin/neochat/";
 
     private PlayerDataManager playerDataManager;
     private YamlConfiguration messages;
     private File messagesFile;
-    private java.io.File formatsFile;
-    private org.bukkit.configuration.file.YamlConfiguration formats;
-    private boolean chatMuted = false;
+    private File formatsFile;
+    private YamlConfiguration formats;
+    private volatile boolean chatMuted = false;
     private boolean papiEnabled = false;
-    private String latestVersion = null;
+    private volatile String latestVersion = null;
     private net.aquiles.neochat.managers.TownyManager townyManager;
-    private final java.util.Set<java.util.UUID> townyChatToggled = new java.util.HashSet<>();
+    private final Set<UUID> townyChatToggled = ConcurrentHashMap.newKeySet();
     private boolean townyChatEnabled = false;
     private net.aquiles.neochat.utils.DiscordManager discordManager;
     private ChatListener chatListener;
+    private FoliaSupport foliaSupport;
 
     @Override
     public void onEnable() {
@@ -36,14 +55,15 @@ public final class NeoChat extends JavaPlugin implements org.bukkit.event.Listen
         saveDefaultConfig();
         saveDefaultMessages();
 
-        formatsFile = new java.io.File(getDataFolder(), "formats.yml");
+        formatsFile = new File(getDataFolder(), "formats.yml");
         if (!formatsFile.exists()) {
             saveResource("formats.yml", false);
         }
-        formats = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(formatsFile);
+        formats = YamlConfiguration.loadConfiguration(formatsFile);
 
         playerDataManager = new PlayerDataManager(this);
         discordManager = new net.aquiles.neochat.utils.DiscordManager(this);
+        foliaSupport = new FoliaSupport(this);
 
         if (getConfig().getBoolean("update-checker.enable", true)) {
             String gistUrl = "https://gist.githubusercontent.com/zlAquiles/4f2a1a36bcb16aa7d15cfb7f785ea071/raw/version.txt";
@@ -51,12 +71,10 @@ public final class NeoChat extends JavaPlugin implements org.bukkit.event.Listen
             new net.aquiles.neochat.utils.UpdateChecker(this, gistUrl).getVersion(version -> {
                 if (!this.getDescription().getVersion().equals(version)) {
                     this.latestVersion = version;
-
-                    String updateMsg = getMessages().getString("update-available", "<green>¡Nueva actualizacion disponible! <gray>(Actual: %current% | Nueva: %new%)");
-                    String parsedLine = updateMsg.replace("%current%", this.getDescription().getVersion()).replace("%new%", version);
-
-                    org.bukkit.command.ConsoleCommandSender console = org.bukkit.Bukkit.getConsoleSender();
-                    console.sendMessage(MiniMessage.miniMessage().deserialize(parsedLine));
+                    runSync(() -> sendConsoleUpdateAvailable(version));
+                } else {
+                    this.latestVersion = null;
+                    runSync(() -> sendConsoleLegacyMessage("&8[&bNeoChat&8] &aYou are running the latest version!"));
                 }
             });
         }
@@ -70,7 +88,8 @@ public final class NeoChat extends JavaPlugin implements org.bukkit.event.Listen
         }
 
         try {
-            org.apache.logging.log4j.core.Logger coreLogger = (org.apache.logging.log4j.core.Logger) org.apache.logging.log4j.LogManager.getRootLogger();
+            org.apache.logging.log4j.core.Logger coreLogger =
+                    (org.apache.logging.log4j.core.Logger) org.apache.logging.log4j.LogManager.getRootLogger();
             coreLogger.addFilter(new net.aquiles.neochat.utils.LogFilter());
         } catch (Exception e) {
             getLogger().warning("The console filter could not be injected (Log4j).");
@@ -90,9 +109,10 @@ public final class NeoChat extends JavaPlugin implements org.bukkit.event.Listen
             getCommand("tc").setExecutor(new net.aquiles.neochat.commands.TownyChatCommand(this));
             getLogger().info("Towny Chat detected and activated.");
         }
+
         printLogo();
         long took = System.currentTimeMillis() - startTime;
-        getLogger().info("Successfully enabled. (took " + took + "ms)");
+        sendConsoleLegacyMessage("&aSuccessfully enabled. &7(took &f" + took + "ms&7)");
     }
 
     @Override
@@ -108,7 +128,6 @@ public final class NeoChat extends JavaPlugin implements org.bukkit.event.Listen
     }
 
     private void registerCommands() {
-
         net.aquiles.neochat.commands.ViewInvCommand viewInvCmd = new net.aquiles.neochat.commands.ViewInvCommand(this);
         getCommand("viewinv").setExecutor(viewInvCmd);
         getCommand("viewinv").setTabCompleter(viewInvCmd);
@@ -165,27 +184,82 @@ public final class NeoChat extends JavaPlugin implements org.bukkit.event.Listen
         console.sendMessage(mm.deserialize(" "));
     }
 
-    public PlayerDataManager getPlayerDataManager() { return playerDataManager; }
-    public YamlConfiguration getMessages() { return messages; }
-    public YamlConfiguration getFormats() { return formats; }
-    public boolean isChatMuted() { return chatMuted; }
-    public void setChatMuted(boolean chatMuted) { this.chatMuted = chatMuted; }
-    public boolean isPapiEnabled() { return papiEnabled; }
+    private void sendConsoleLegacyMessage(String message) {
+        Bukkit.getConsoleSender().sendMessage(MiniMessage.miniMessage().deserialize(translateLegacy(message)));
+    }
+
+    private Component buildUpdateAvailableMessage(String newVersion, boolean includeClickableUrl) {
+        String parsedLine = getMessages()
+                .getString(
+                        "update-available-join",
+                        "<dark_gray>[<aqua>NeoChat<dark_gray>] <green>Update available! <gray>(<white>%current% <gray>-> <white>%new%<gray>)"
+                )
+                .replace("%current%", this.getDescription().getVersion())
+                .replace("%new%", newVersion);
+
+        Component baseMessage = MiniMessage.miniMessage().deserialize(parsedLine);
+        if (!includeClickableUrl) {
+            return baseMessage;
+        }
+
+        Component downloadButton = Component.text("[Download here]", NamedTextColor.AQUA)
+                .decorate(TextDecoration.UNDERLINED)
+                .clickEvent(ClickEvent.openUrl(UPDATE_URL))
+                .hoverEvent(HoverEvent.showText(Component.text("Open NeoChat on Modrinth", NamedTextColor.GRAY)));
+
+        return baseMessage
+                .append(Component.space())
+                .append(downloadButton);
+    }
+
+    private void sendConsoleUpdateAvailable(String newVersion) {
+        sendConsoleLegacyMessage(
+                "&8[&bNeoChat&8] &aNew update is available &7Version: &f"
+                        + this.getDescription().getVersion()
+                        + " &7| &7New version: &f"
+                        + newVersion
+        );
+        sendConsoleLegacyMessage("&b" + UPDATE_URL);
+    }
+
+    public PlayerDataManager getPlayerDataManager() {
+        return playerDataManager;
+    }
+
+    public YamlConfiguration getMessages() {
+        return messages;
+    }
+
+    public YamlConfiguration getFormats() {
+        return formats;
+    }
+
+    public boolean isChatMuted() {
+        return chatMuted;
+    }
+
+    public void setChatMuted(boolean chatMuted) {
+        this.chatMuted = chatMuted;
+    }
+
+    public boolean isPapiEnabled() {
+        return papiEnabled;
+    }
 
     @org.bukkit.event.EventHandler
     public void onPlayerJoin(org.bukkit.event.player.PlayerJoinEvent event) {
-        org.bukkit.entity.Player player = event.getPlayer();
+        Player player = event.getPlayer();
         if (latestVersion != null && player.hasPermission("neochat.admin")) {
-            String updateMsg = getMessages().getString("update-available", "<green>¡Nueva actualizacion disponible para NeoChat! <gray>Version actual: <white>%current% <gray>| Nueva version: <white>%new%");
-            String parsedLine = updateMsg.replace("%current%", this.getDescription().getVersion()).replace("%new%", latestVersion);
-            player.sendMessage(MiniMessage.miniMessage().deserialize(parsedLine));
+            sendMessage(player, buildUpdateAvailableMessage(latestVersion, true));
         }
     }
 
     public String translateLegacy(String text) {
-        if (text == null) return "";
+        if (text == null) {
+            return "";
+        }
 
-        text = text.replace("§", "&");
+        text = text.replace("\u00A7", "&");
 
         return text.replace("&0", "<black>").replace("&1", "<dark_blue>").replace("&2", "<dark_green>")
                 .replace("&3", "<dark_aqua>").replace("&4", "<dark_red>").replace("&5", "<dark_purple>")
@@ -196,8 +270,84 @@ public final class NeoChat extends JavaPlugin implements org.bukkit.event.Listen
                 .replace("&n", "<underlined>").replace("&o", "<italic>").replace("&r", "<reset>");
     }
 
-    public net.aquiles.neochat.managers.TownyManager getTownyManager() { return townyManager; }
-    public java.util.Set<java.util.UUID> getTownyChatToggled() { return townyChatToggled; }
-    public boolean isTownyChatEnabled() { return townyChatEnabled; }
-    public net.aquiles.neochat.utils.DiscordManager getDiscordManager() { return discordManager; }
+    public <T> T callSync(Callable<T> task) {
+        return foliaSupport.callGlobal(task);
+    }
+
+    public void runSync(Runnable task) {
+        foliaSupport.runGlobal(task);
+    }
+
+    public void runAsync(Runnable task) {
+        foliaSupport.runAsync(task);
+    }
+
+    public <T> T callForEntity(Entity entity, Callable<T> task) {
+        return foliaSupport.callForEntity(entity, task);
+    }
+
+    public <T> T callForEntityOrDefault(Entity entity, Callable<T> task, T fallback) {
+        return foliaSupport.callForEntityOrDefault(entity, task, fallback);
+    }
+
+    public void runForEntity(Entity entity, Runnable task) {
+        foliaSupport.runForEntity(entity, task);
+    }
+
+    public String applyPapiPlaceholders(Player player, String text) {
+        if (!papiEnabled || text == null || text.isEmpty()) {
+            return text == null ? "" : text;
+        }
+
+        return callForEntity(player, () -> PlaceholderAPI.setPlaceholders(player, text));
+    }
+
+    public void sendMessage(CommandSender sender, Component message) {
+        if (sender instanceof Player player) {
+            sendMessage(player, message);
+            return;
+        }
+
+        runSync(() -> sender.sendMessage(message));
+    }
+
+    public void sendMessage(Player player, Component message) {
+        runForEntity(player, () -> player.sendMessage(message));
+    }
+
+    public void playSound(Player player, Sound sound, float volume, float pitch) {
+        runForEntity(player, () -> player.playSound(player.getLocation(), sound, volume, pitch));
+    }
+
+    public void openInventory(Player player, Inventory inventory) {
+        runForEntity(player, () -> player.openInventory(inventory));
+    }
+
+    public void broadcast(Component message) {
+        runSync(() -> Bukkit.broadcast(message));
+    }
+
+    public void broadcast(Component message, String permission) {
+        runSync(() -> Bukkit.broadcast(message, permission));
+    }
+
+    public boolean isFolia() {
+        return foliaSupport != null && foliaSupport.isFolia();
+    }
+
+    public net.aquiles.neochat.managers.TownyManager getTownyManager() {
+        return townyManager;
+    }
+
+    public Set<UUID> getTownyChatToggled() {
+        return townyChatToggled;
+    }
+
+    public boolean isTownyChatEnabled() {
+        return townyChatEnabled;
+    }
+
+    public net.aquiles.neochat.utils.DiscordManager getDiscordManager() {
+        return discordManager;
+    }
 }

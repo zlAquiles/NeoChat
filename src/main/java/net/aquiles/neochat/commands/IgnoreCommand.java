@@ -6,17 +6,22 @@ import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-public class IgnoreCommand implements CommandExecutor, org.bukkit.command.TabCompleter {
+import java.util.ArrayList;
+import java.util.List;
+
+public class IgnoreCommand implements CommandExecutor, TabCompleter {
 
     private final NeoChat plugin;
-    private final MiniMessage mm;
+    private final MiniMessage miniMessage;
 
     public IgnoreCommand(NeoChat plugin) {
         this.plugin = plugin;
-        this.mm = MiniMessage.miniMessage();
+        this.miniMessage = MiniMessage.miniMessage();
     }
 
     @Override
@@ -26,69 +31,79 @@ public class IgnoreCommand implements CommandExecutor, org.bukkit.command.TabCom
             return true;
         }
 
-        String noPermMsg = plugin.getMessages().getString("no-permission", "<red>No tienes permisos.");
+        String noPermission = plugin.getMessages().getString("no-permission", "<red>No tienes permisos.");
 
         if (command.getName().equalsIgnoreCase("ignoreall")) {
             if (!player.hasPermission("neochat.ignore.use")) {
-                player.sendMessage(mm.deserialize(noPermMsg));
+                plugin.sendMessage(player, miniMessage.deserialize(noPermission));
                 return true;
             }
 
-            boolean isNowOn = plugin.getPlayerDataManager().toggleIgnoreAll(player);
-            String msgKey = isNowOn ? "ignore-all-on" : "ignore-all-off";
-            player.sendMessage(mm.deserialize(plugin.getMessages().getString(msgKey, "<gray>Estado de IgnoreAll cambiado.")));
+            boolean enabled = plugin.getPlayerDataManager().toggleIgnoreAll(player);
+            String key = enabled ? "ignore-all-on" : "ignore-all-off";
+            plugin.sendMessage(player, miniMessage.deserialize(plugin.getMessages().getString(key, "<gray>Estado de IgnoreAll cambiado.")));
             return true;
         }
 
-        if (command.getName().equalsIgnoreCase("ignore")) {
-            if (!player.hasPermission("neochat.ignore.use")) {
-                player.sendMessage(mm.deserialize(noPermMsg));
-                return true;
-            }
+        if (!command.getName().equalsIgnoreCase("ignore")) {
+            return false;
+        }
 
-            if (args.length < 1) {
-                player.sendMessage(mm.deserialize(plugin.getMessages().getString("ignore-usage", "<red>Uso: /ignore <jugador>")));
-                return true;
-            }
-
-            Player target = Bukkit.getPlayer(args[0]);
-
-            if (target == null || !target.isOnline() || !player.canSee(target)) {
-                player.sendMessage(mm.deserialize(plugin.getMessages().getString("pm-player-not-found", "<red>Jugador no encontrado.")));
-                return true;
-            }
-
-            if (target.equals(player)) {
-                player.sendMessage(mm.deserialize(plugin.getMessages().getString("ignore-cannot-ignore-self", "<red>No puedes ignorarte a ti mismo.")));
-                return true;
-            }
-
-            if (target.hasPermission("neochat.ignore.bypass")) {
-                player.sendMessage(mm.deserialize(plugin.getMessages().getString("ignore-cannot-ignore-admin", "<red>No puedes ignorar a un administrador.")));
-                return true;
-            }
-
-            boolean isIgnored = plugin.getPlayerDataManager().toggleIgnore(player, target);
-            String msgKey = isIgnored ? "ignore-add" : "ignore-remove";
-            String msg = plugin.getMessages().getString(msgKey, "<gray>Estado de ignore actualizado.");
-
-            player.sendMessage(mm.deserialize(msg.replace("%player%", target.getName())));
+        if (!player.hasPermission("neochat.ignore.use")) {
+            plugin.sendMessage(player, miniMessage.deserialize(noPermission));
             return true;
         }
 
-        return false;
+        if (args.length < 1) {
+            plugin.sendMessage(player, miniMessage.deserialize(plugin.getMessages().getString("ignore-usage", "<red>Uso: /ignore <jugador>")));
+            return true;
+        }
+
+        Player target = Bukkit.getPlayer(args[0]);
+        if (target == null || !plugin.callForEntity(player, () -> player.canSee(target))) {
+            plugin.sendMessage(player, miniMessage.deserialize(plugin.getMessages().getString("pm-player-not-found", "<red>Jugador no encontrado.")));
+            return true;
+        }
+
+        if (target.equals(player)) {
+            plugin.sendMessage(player, miniMessage.deserialize(plugin.getMessages().getString("ignore-cannot-ignore-self", "<red>No puedes ignorarte a ti mismo.")));
+            return true;
+        }
+
+        if (plugin.callForEntityOrDefault(target, () -> target.hasPermission("neochat.ignore.bypass"), false)) {
+            plugin.sendMessage(player, miniMessage.deserialize(plugin.getMessages().getString("ignore-cannot-ignore-admin", "<red>No puedes ignorar a un administrador.")));
+            return true;
+        }
+
+        boolean ignored = plugin.getPlayerDataManager().toggleIgnore(player, target);
+        String key = ignored ? "ignore-add" : "ignore-remove";
+        String message = plugin.getMessages().getString(key, "<gray>Estado de ignore actualizado.").replace("%player%", target.getName());
+        plugin.sendMessage(player, miniMessage.deserialize(message));
+        return true;
     }
 
     @Override
-    public @org.jetbrains.annotations.Nullable java.util.List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
-        java.util.List<String> completions = new java.util.ArrayList<>();
+    public @Nullable List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
+        if (!command.getName().equalsIgnoreCase("ignore") || args.length != 1) {
+            return List.of();
+        }
 
-        if (command.getName().equalsIgnoreCase("ignore") && args.length == 1) {
-            for (Player p : Bukkit.getOnlinePlayers()) {
-                if (sender instanceof Player player && !player.canSee(p)) continue;
-                if (p.getName().toLowerCase().startsWith(args[0].toLowerCase())) {
-                    completions.add(p.getName());
-                }
+        String prefix = args[0].toLowerCase();
+        if (sender instanceof Player player) {
+            return plugin.callForEntity(player, () -> collectVisiblePlayers(player, prefix));
+        }
+
+        return collectVisiblePlayers(null, prefix);
+    }
+
+    private List<String> collectVisiblePlayers(Player viewer, String prefix) {
+        List<String> completions = new ArrayList<>();
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            if (viewer != null && !viewer.canSee(online)) {
+                continue;
+            }
+            if (online.getName().toLowerCase().startsWith(prefix)) {
+                completions.add(online.getName());
             }
         }
         return completions;
