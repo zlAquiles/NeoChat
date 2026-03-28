@@ -34,7 +34,7 @@ Optional integrations:
 2. Place it in your server's `plugins/` folder.
 3. Start the server once to generate the configuration files.
 4. Edit `config.yml`, `messages.yml`, and `formats.yml` as needed.
-5. Restart the server.
+5. Reload plugin.
 
 ## Commands
 
