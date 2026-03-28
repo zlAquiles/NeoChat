@@ -2,6 +2,8 @@
 
 NeoChat is an advanced chat plugin for Paper-compatible Minecraft servers focused on rich formatting, interactive placeholders, private messages, moderation tools, and Folia-aware execution.
 
+Download plugin: https://modrinth.com/plugin/neochat
+
 ## Features
 
 - Rich chat formatting powered by Adventure and MiniMessage
