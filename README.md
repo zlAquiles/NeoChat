@@ -13,6 +13,7 @@ Download plugin: https://modrinth.com/plugin/neochat
 - Private messages with `/msg`, `/reply`, `/togglemsg`, and `/socialspy`
 - Ignore system with per-player ignore and ignore-all mode
 - Global chat mute commands
+- Built-in format debugging with `/neochat debug <player>`
 - Optional Towny chat integration
 - Optional Discord webhook relay
 - Anti-spam, anti-flood, anti-caps, anti-similarity, anti-swear, and character filtering
@@ -43,6 +44,7 @@ Optional integrations:
 | Command | Description | Permission |
 | --- | --- | --- |
 | `/neochat reload` | Reloads plugin configuration and messages | `neochat.admin.reload` |
+| `/neochat debug <player>` | Shows the selected format, resolved placeholders, and LuckPerms meta for a player | `neochat.admin.debug` |
 | `/chatmute` | Mutes global chat | `neochat.admin.mute` |
 | `/chatunmute` | Unmutes global chat | `neochat.admin.mute` |
 | `/msg <player> <message>` | Sends a private message | `neochat.pm.use` |
@@ -50,7 +52,7 @@ Optional integrations:
 | `/togglemsg` | Toggles private messages on or off | `neochat.pm.toggle` |
 | `/socialspy` | Toggles SocialSpy | `neochat.admin.spy` |
 | `/ignore <player>` | Ignores or unignores a player | `neochat.ignore.use` |
-| `/ignoreall` | Toggles ignore-all mode | `neochat.ignore.use` |
+| `/ignoreall` | Toggles ignore-all mode | `neochat.ignore.ignoreall` |
 | `/tc [message]` | Toggles Towny chat or sends a town message | `neochat.command.townychat` |
 
 ## Main Permissions
@@ -60,10 +62,12 @@ Optional integrations:
 | `neochat.admin.reload` | Allows reloading NeoChat |
 | `neochat.admin.mute` | Allows muting and unmuting global chat |
 | `neochat.admin.spy` | Allows using SocialSpy |
+| `neochat.admin.debug` | Allows inspecting a player's chat format resolution |
 | `neochat.pm.use` | Allows private messaging |
 | `neochat.pm.toggle` | Allows toggling private messages |
 | `neochat.pm.bypass` | Bypasses private-message blocks on targets |
 | `neochat.ignore.use` | Allows ignore commands |
+| `neochat.ignore.ignoreall` | Allows ignore-all mode |
 | `neochat.ignore.bypass` | Prevents being ignored |
 | `neochat.command.townychat` | Allows Towny chat command usage |
 | `neochat.bypass.mute` | Bypasses global chat mute |
@@ -78,6 +82,9 @@ Optional integrations:
 | `neochat.chat.gradient` | Allows gradients in chat |
 | `neochat.chat.rainbow` | Allows rainbow formatting in chat |
 | `neochat.chat.reset` | Allows reset tags in chat |
+| `neochat.chat.click` | Allows click events in chat formatting |
+| `neochat.chat.hover` | Allows hover events in chat formatting |
+| `neochat.chat.font` | Allows custom font tags in chat formatting |
 | `neochat.chat.link` | Allows links to be formatted |
 
 ## Configuration
@@ -98,6 +105,8 @@ Notable configurable areas include:
 - Discord webhook output
 - Towny chat format
 - update checker behavior
+
+Custom format permissions are driven by `formats.yml`, so servers can define their own `neochat.format.*` nodes per format entry.
 
 ## Building
 
@@ -124,6 +133,7 @@ build/libs/
 - NeoChat currently loads as a classic plugin through `plugin.yml`.
 - The project avoids NMS, which helps compatibility across newer Paper-compatible server versions.
 - If you run very new server versions, also verify your PlaceholderAPI, Towny, and ItemsAdder builds.
+- If a LuckPerms suffix contains Nexo glyphs, keep that suffix outside `<gradient>` or similar styling blocks to avoid rendering the glyph tag literally.
 
 ## License
 

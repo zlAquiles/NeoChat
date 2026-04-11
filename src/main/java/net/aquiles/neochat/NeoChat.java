@@ -68,9 +68,7 @@ public final class NeoChat extends JavaPlugin implements org.bukkit.event.Listen
         foliaSupport = new FoliaSupport(this);
 
         if (getConfig().getBoolean("update-checker.enable", true)) {
-            String gistUrl = "https://gist.githubusercontent.com/zlAquiles/4f2a1a36bcb16aa7d15cfb7f785ea071/raw/version.txt";
-
-            new net.aquiles.neochat.utils.UpdateChecker(this, gistUrl).getVersion(version -> {
+            new net.aquiles.neochat.utils.UpdateChecker(this).getVersion(version -> {
                 if (!this.getDescription().getVersion().equals(version)) {
                     this.latestVersion = version;
                     runSync(() -> sendConsoleUpdateAvailable(version));
@@ -356,6 +354,10 @@ public final class NeoChat extends JavaPlugin implements org.bukkit.event.Listen
 
     public net.aquiles.neochat.managers.TownyManager getTownyManager() {
         return townyManager;
+    }
+
+    public net.aquiles.neochat.chat.ChatListener.FormatDebugInfo debugChatFormat(Player player) {
+        return chatListener == null ? null : chatListener.debugFormat(player);
     }
 
     public Set<UUID> getTownyChatToggled() {

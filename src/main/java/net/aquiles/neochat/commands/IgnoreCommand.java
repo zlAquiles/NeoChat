@@ -34,7 +34,7 @@ public class IgnoreCommand implements CommandExecutor, TabCompleter {
         String noPermission = plugin.getMessages().getString("no-permission", "<red>No tienes permisos.");
 
         if (command.getName().equalsIgnoreCase("ignoreall")) {
-            if (!player.hasPermission("neochat.ignore.use")) {
+            if (!player.hasPermission("neochat.ignore.ignoreall")) {
                 plugin.sendMessage(player, miniMessage.deserialize(noPermission));
                 return true;
             }

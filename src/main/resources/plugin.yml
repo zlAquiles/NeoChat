@@ -11,7 +11,6 @@ folia-supported: true
 commands:
   neochat:
     description: Main administration command.
-    permission: neochat.admin.reload
     aliases: [ nc ]
   viewinv:
     description: Hidden internal command to view inventories.
@@ -45,3 +44,126 @@ commands:
   tc:
     description: Activate the city chat or send a message.
     permission: neochat.command.townychat
+permissions:
+  neochat.admin:
+    description: Grants all NeoChat administrative permissions.
+    default: op
+    children:
+      neochat.admin.reload: true
+      neochat.admin.mute: true
+      neochat.admin.spy: true
+      neochat.admin.debug: true
+      neochat.bypass.mute: true
+      neochat.bypass.cooldown: true
+      neochat.bypass.flood: true
+      neochat.bypass.similarity: true
+      neochat.bypass.caps: true
+      neochat.bypass.swear: true
+      neochat.bypass.alphanumeric: true
+      neochat.pm.bypass: true
+      neochat.ignore.bypass: true
+  neochat.admin.reload:
+    description: Allows reloading NeoChat configuration and messages.
+    default: op
+  neochat.admin.mute:
+    description: Allows muting and unmuting the global chat.
+    default: op
+  neochat.admin.spy:
+    description: Allows using SocialSpy.
+    default: op
+  neochat.admin.debug:
+    description: Allows inspecting a player's resolved chat format and placeholders.
+    default: op
+  neochat.pm.use:
+    description: Allows sending and replying to private messages.
+    default: true
+  neochat.pm.toggle:
+    description: Allows toggling private messages on or off.
+    default: true
+  neochat.pm.bypass:
+    description: Allows messaging players who have private messages disabled.
+    default: op
+  neochat.ignore.use:
+    description: Allows ignoring specific players.
+    default: true
+  neochat.ignore.ignoreall:
+    description: Allows toggling Ignore-All mode.
+    default: true
+  neochat.ignore.bypass:
+    description: Prevents the player from being ignored.
+    default: op
+  neochat.command.townychat:
+    description: Allows using the Towny chat command.
+    default: true
+  neochat.bypass.mute:
+    description: Bypasses the global chat mute.
+    default: op
+  neochat.bypass.cooldown:
+    description: Bypasses chat cooldown checks.
+    default: op
+  neochat.bypass.flood:
+    description: Bypasses anti-flood protection.
+    default: op
+  neochat.bypass.similarity:
+    description: Bypasses similarity checks.
+    default: op
+  neochat.bypass.caps:
+    description: Bypasses anti-caps protection.
+    default: op
+  neochat.bypass.swear:
+    description: Bypasses the swear filter.
+    default: op
+  neochat.bypass.alphanumeric:
+    description: Bypasses the character whitelist.
+    default: op
+  neochat.chat.color:
+    description: Allows MiniMessage colors in chat.
+    default: false
+  neochat.chat.decoration:
+    description: Allows MiniMessage text decorations in chat.
+    default: false
+  neochat.chat.gradient:
+    description: Allows MiniMessage gradients in chat.
+    default: false
+  neochat.chat.rainbow:
+    description: Allows MiniMessage rainbow tags in chat.
+    default: false
+  neochat.chat.reset:
+    description: Allows MiniMessage reset tags in chat.
+    default: false
+  neochat.chat.click:
+    description: Allows MiniMessage click events in chat.
+    default: false
+  neochat.chat.hover:
+    description: Allows MiniMessage hover events in chat.
+    default: false
+  neochat.chat.font:
+    description: Allows MiniMessage font tags in chat.
+    default: false
+  neochat.chat.link:
+    description: Allows links to be transformed into clickable chat components.
+    default: false
+  neochat.placeholder.ping:
+    description: Allows using the [ping] chat placeholder.
+    default: false
+  neochat.placeholder.pos:
+    description: Allows using the [pos] chat placeholder.
+    default: false
+  neochat.placeholder.money:
+    description: Allows using the [money] chat placeholder.
+    default: false
+  neochat.placeholder.playtime:
+    description: Allows using the [playtime] chat placeholder.
+    default: false
+  neochat.placeholder.item:
+    description: Allows using the [item] placeholder.
+    default: false
+  neochat.placeholder.inv:
+    description: Allows using the [inv] placeholder.
+    default: false
+  neochat.placeholder.ender:
+    description: Allows using the [ender] placeholder.
+    default: false
+  neochat.placeholder.shulker:
+    description: Allows using the [shulker] placeholder.
+    default: false

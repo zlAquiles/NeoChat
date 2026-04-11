@@ -32,6 +32,9 @@ import java.util.regex.Pattern;
 
 public class ChatListener implements Listener {
 
+    private static final String DEFAULT_GROUP_FORMAT = "<gray>%player_name% <dark_gray>\u00BB <reset><message>";
+    private static final Pattern REMAINING_PAPI_PATTERN = Pattern.compile("%[^%\\s]+%");
+
     private final NeoChat plugin;
     private final MiniMessage strictMiniMessage;
     private final Map<UUID, Long> cooldowns = new ConcurrentHashMap<>();
@@ -266,36 +269,9 @@ public class ChatListener implements Listener {
         Component playerMessageComponent = playerMessageParser.deserialize(rawMessage);
         playerMessageComponent = applyPlaceholders(player, playerMessageComponent);
 
-        int highestPriority = Integer.MAX_VALUE;
-        String groupFormat = "<gray>%player_name% <dark_gray>\u00BB <reset><message>";
-        String hoverText = "";
-
-        if (plugin.getFormats() != null && plugin.getFormats().contains("formats")) {
-            for (String key : plugin.getFormats().getConfigurationSection("formats").getKeys(false)) {
-                String perm = plugin.getFormats().getString("formats." + key + ".permission", "neochat.format." + key);
-                int priority = plugin.getFormats().getInt("formats." + key + ".priority", 999);
-                List<String> groups = plugin.getFormats().getStringList("formats." + key + ".groups");
-
-                boolean hasAccess = player.hasPermission(perm);
-
-                if (!hasAccess && groups != null && !groups.isEmpty()) {
-                    for (String group : groups) {
-                        if (player.hasPermission("group." + group.toLowerCase())) {
-                            hasAccess = true;
-                            break;
-                        }
-                    }
-                }
-
-                if (hasAccess && priority < highestPriority) {
-                    highestPriority = priority;
-                    groupFormat = plugin.getFormats().getString("formats." + key + ".chat-format", groupFormat);
-                    hoverText = plugin.getFormats().getString("formats." + key + ".hover-message", "");
-                }
-            }
-        }
-
-        groupFormat = groupFormat.replace("%player_name%", player.getName());
+        FormatSelection formatSelection = resolveFormatSelection(player);
+        String groupFormat = formatSelection.groupFormat().replace("%player_name%", player.getName());
+        String hoverText = formatSelection.hoverText();
 
         if (plugin.isPapiEnabled()) {
             groupFormat = plugin.applyPapiPlaceholders(player, groupFormat);
@@ -315,6 +291,126 @@ public class ChatListener implements Listener {
                 groupFormat,
                 hoverText.replace("\n", "<newline>")
         );
+    }
+
+    public FormatDebugInfo debugFormat(Player player) {
+        FormatSelection formatSelection = resolveFormatSelection(player);
+        String rawGroupFormat = formatSelection.groupFormat().replace("%player_name%", player.getName());
+        String rawHoverText = formatSelection.hoverText();
+
+        String resolvedGroupFormat = rawGroupFormat;
+        String resolvedHoverText = rawHoverText;
+        String luckPermsPrefix = plugin.isPapiEnabled() ? plugin.applyPapiPlaceholders(player, "%luckperms_prefix%") : "<papi-disabled>";
+        String luckPermsSuffix = plugin.isPapiEnabled() ? plugin.applyPapiPlaceholders(player, "%luckperms_suffix%") : "<papi-disabled>";
+
+        if (plugin.isPapiEnabled()) {
+            resolvedGroupFormat = plugin.applyPapiPlaceholders(player, resolvedGroupFormat);
+            if (!resolvedHoverText.isEmpty()) {
+                resolvedHoverText = plugin.applyPapiPlaceholders(player, resolvedHoverText);
+            }
+        }
+
+        resolvedGroupFormat = plugin.translateLegacy(resolvedGroupFormat);
+        if (!resolvedHoverText.isEmpty()) {
+            resolvedHoverText = plugin.translateLegacy(resolvedHoverText);
+        }
+
+        return new FormatDebugInfo(
+                formatSelection.key(),
+                formatSelection.priority(),
+                formatSelection.permission(),
+                formatSelection.matchedBy(),
+                formatSelection.groups(),
+                rawGroupFormat,
+                resolvedGroupFormat,
+                rawHoverText,
+                resolvedHoverText,
+                luckPermsPrefix,
+                luckPermsSuffix,
+                containsRemainingPapi(resolvedGroupFormat),
+                containsRemainingPapi(resolvedHoverText)
+        );
+    }
+
+    private FormatSelection resolveFormatSelection(Player player) {
+        int highestPriority = Integer.MAX_VALUE;
+        String selectedKey = "built-in-default";
+        String selectedPermission = "-";
+        String selectedMatchedBy = "fallback";
+        List<String> selectedGroups = List.of();
+        String groupFormat = DEFAULT_GROUP_FORMAT;
+        String hoverText = "";
+
+        FormatSelection groupMatch = findBestFormatSelection(player, true);
+        if (groupMatch != null) {
+            return groupMatch;
+        }
+
+        FormatSelection permissionMatch = findBestFormatSelection(player, false);
+        if (permissionMatch != null) {
+            return permissionMatch;
+        }
+
+        return new FormatSelection(selectedKey, -1, selectedPermission, selectedMatchedBy, selectedGroups, groupFormat, hoverText);
+    }
+
+    private FormatSelection findBestFormatSelection(Player player, boolean groupOnly) {
+        if (plugin.getFormats() == null || !plugin.getFormats().contains("formats")) {
+            return null;
+        }
+
+        int highestPriority = Integer.MAX_VALUE;
+        String selectedKey = null;
+        String selectedPermission = null;
+        String selectedMatchedBy = null;
+        List<String> selectedGroups = List.of();
+        String groupFormat = null;
+        String hoverText = null;
+
+        for (String key : plugin.getFormats().getConfigurationSection("formats").getKeys(false)) {
+            String perm = plugin.getFormats().getString("formats." + key + ".permission", "neochat.format." + key);
+            int priority = plugin.getFormats().getInt("formats." + key + ".priority", 999);
+            List<String> groups = plugin.getFormats().getStringList("formats." + key + ".groups");
+
+            boolean hasAccess = false;
+            String matchedBy = null;
+
+            if (groupOnly) {
+                if (groups != null && !groups.isEmpty()) {
+                    for (String group : groups) {
+                        String groupPermission = "group." + group.toLowerCase();
+                        if (player.hasPermission(groupPermission)) {
+                            hasAccess = true;
+                            matchedBy = "group:" + group.toLowerCase();
+                            break;
+                        }
+                    }
+                }
+            } else if (player.hasPermission(perm)) {
+                hasAccess = true;
+                matchedBy = "permission:" + perm;
+            }
+
+            if (hasAccess && priority < highestPriority) {
+                highestPriority = priority;
+                selectedKey = key;
+                selectedPermission = perm;
+                selectedMatchedBy = matchedBy;
+                selectedGroups = List.copyOf(groups);
+                groupFormat = plugin.getFormats().getString("formats." + key + ".chat-format", DEFAULT_GROUP_FORMAT);
+                hoverText = plugin.getFormats().getString("formats." + key + ".hover-message", "");
+            }
+        }
+
+        if (selectedKey == null) {
+            return null;
+        }
+
+        return new FormatSelection(selectedKey, highestPriority, selectedPermission, selectedMatchedBy, selectedGroups, groupFormat, hoverText);
+    }
+
+    private boolean containsRemainingPapi(String text) {
+        return text != null && !text.isEmpty() && REMAINING_PAPI_PATTERN.matcher(text).find();
     }
 
     private double calculateSimilarity(String s1, String s2) {
@@ -462,5 +558,25 @@ public class ChatListener implements Listener {
         private String hoverText() {
             return hoverText;
         }
+    }
+
+    private record FormatSelection(String key, int priority, String permission, String matchedBy, List<String> groups, String groupFormat, String hoverText) {
+    }
+
+    public record FormatDebugInfo(
+            String formatKey,
+            int priority,
+            String permission,
+            String matchedBy,
+            List<String> groups,
+            String rawGroupFormat,
+            String resolvedGroupFormat,
+            String rawHoverText,
+            String resolvedHoverText,
+            String luckPermsPrefix,
+            String luckPermsSuffix,
+            boolean groupFormatHasUnresolvedPlaceholders,
+            boolean hoverHasUnresolvedPlaceholders
+    ) {
     }
 }
