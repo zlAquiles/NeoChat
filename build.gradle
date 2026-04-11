@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'me.aquiles'
-version = '1.0.1'
+version = '1.0.3'
 description = 'Advanced plugin for chat formatting, interactivity, and placeholders.'
 
 java {

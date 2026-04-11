@@ -28,10 +28,12 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
 
 public final class NeoChat extends JavaPlugin implements org.bukkit.event.Listener {
 
     private static final String UPDATE_URL = "https://modrinth.com/plugin/neochat/";
+    private static final Pattern PAPI_PLACEHOLDER_PATTERN = Pattern.compile("%[^%\\s]+%");
 
     private PlayerDataManager playerDataManager;
     private YamlConfiguration messages;
@@ -299,7 +301,24 @@ public final class NeoChat extends JavaPlugin implements org.bukkit.event.Listen
             return text == null ? "" : text;
         }
 
-        return callForEntity(player, () -> PlaceholderAPI.setPlaceholders(player, text));
+        return callForEntity(player, () -> {
+            String resolved = text;
+
+            for (int pass = 0; pass < 2; pass++) {
+                String parsed = PlaceholderAPI.setPlaceholders(player, resolved);
+                if (parsed.equals(resolved) || !containsPapiPlaceholders(parsed)) {
+                    return parsed;
+                }
+
+                resolved = parsed;
+            }
+
+            return resolved;
+        });
+    }
+
+    private boolean containsPapiPlaceholders(String text) {
+        return text != null && PAPI_PLACEHOLDER_PATTERN.matcher(text).find();
     }
 
     public void sendMessage(CommandSender sender, Component message) {
