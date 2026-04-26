@@ -3,6 +3,7 @@ package net.aquiles.neochat.utils;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Entity;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.scheduler.BukkitTask;
 
 import java.lang.reflect.Method;
 import java.util.concurrent.Callable;
@@ -11,6 +12,10 @@ import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 
 public final class FoliaSupport {
+
+    private static final ScheduledTaskHandle NOOP_TASK_HANDLE = () -> {
+    };
+    private static final Method FOLIA_SCHEDULED_TASK_CANCEL_METHOD = findFoliaScheduledTaskCancelMethod();
 
     private final Plugin plugin;
     private final boolean folia;
@@ -48,6 +53,49 @@ public final class FoliaSupport {
             executeMethod.invoke(scheduler, plugin, task);
         } catch (ReflectiveOperationException exception) {
             throw new IllegalStateException("Unable to schedule task on the global region.", exception);
+        }
+    }
+
+    public ScheduledTaskHandle runGlobalLater(long delayTicks, Runnable task) {
+        long safeDelay = Math.max(0L, delayTicks);
+        if (safeDelay <= 0L) {
+            runGlobal(task);
+            return NOOP_TASK_HANDLE;
+        }
+
+        if (getGlobalRegionSchedulerMethod == null) {
+            BukkitTask bukkitTask = Bukkit.getScheduler().runTaskLater(plugin, task, safeDelay);
+            return bukkitTask::cancel;
+        }
+
+        try {
+            Object scheduler = getGlobalRegionSchedulerMethod.invoke(Bukkit.getServer());
+            Method runDelayedMethod = scheduler.getClass().getMethod("runDelayed", Plugin.class, Consumer.class, long.class);
+            Consumer<Object> consumer = scheduledTask -> task.run();
+            Object scheduledTask = runDelayedMethod.invoke(scheduler, plugin, consumer, safeDelay);
+            return new ReflectiveTaskHandle(scheduledTask);
+        } catch (ReflectiveOperationException exception) {
+            throw new IllegalStateException("Unable to schedule delayed task on the global region.", exception);
+        }
+    }
+
+    public ScheduledTaskHandle runGlobalTimer(long delayTicks, long periodTicks, Runnable task) {
+        long safeDelay = Math.max(1L, delayTicks);
+        long safePeriod = Math.max(1L, periodTicks);
+
+        if (getGlobalRegionSchedulerMethod == null) {
+            BukkitTask bukkitTask = Bukkit.getScheduler().runTaskTimer(plugin, task, safeDelay, safePeriod);
+            return bukkitTask::cancel;
+        }
+
+        try {
+            Object scheduler = getGlobalRegionSchedulerMethod.invoke(Bukkit.getServer());
+            Method runAtFixedRateMethod = scheduler.getClass().getMethod("runAtFixedRate", Plugin.class, Consumer.class, long.class, long.class);
+            Consumer<Object> consumer = scheduledTask -> task.run();
+            Object scheduledTask = runAtFixedRateMethod.invoke(scheduler, plugin, consumer, safeDelay, safePeriod);
+            return new ReflectiveTaskHandle(scheduledTask);
+        } catch (ReflectiveOperationException exception) {
+            throw new IllegalStateException("Unable to schedule repeating task on the global region.", exception);
         }
     }
 
@@ -180,6 +228,15 @@ public final class FoliaSupport {
         }
     }
 
+    private static Method findFoliaScheduledTaskCancelMethod() {
+        try {
+            Class<?> scheduledTaskClass = Class.forName("io.papermc.paper.threadedregions.scheduler.ScheduledTask");
+            return scheduledTaskClass.getMethod("cancel");
+        } catch (ReflectiveOperationException exception) {
+            return null;
+        }
+    }
+
     private static boolean detectFolia() {
         try {
             Class.forName("io.papermc.paper.threadedregions.RegionizedServer");
@@ -213,6 +270,32 @@ public final class FoliaSupport {
             throw new IllegalStateException("Interrupted while waiting for scheduled task completion.", exception);
         } catch (ExecutionException exception) {
             throw new IllegalStateException("Scheduled task execution failed.", exception.getCause());
+        }
+    }
+
+    public interface ScheduledTaskHandle {
+        void cancel();
+    }
+
+    private record ReflectiveTaskHandle(Object scheduledTask) implements ScheduledTaskHandle {
+
+        @Override
+        public void cancel() {
+            if (scheduledTask == null) {
+                return;
+            }
+
+            try {
+                if (FOLIA_SCHEDULED_TASK_CANCEL_METHOD != null && FOLIA_SCHEDULED_TASK_CANCEL_METHOD.getDeclaringClass().isInstance(scheduledTask)) {
+                    FOLIA_SCHEDULED_TASK_CANCEL_METHOD.invoke(scheduledTask);
+                    return;
+                }
+
+                Method cancelMethod = scheduledTask.getClass().getMethod("cancel");
+                cancelMethod.invoke(scheduledTask);
+            } catch (ReflectiveOperationException exception) {
+                throw new IllegalStateException("Unable to cancel scheduled task.", exception);
+            }
         }
     }
 }

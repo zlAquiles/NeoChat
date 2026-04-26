@@ -12,6 +12,7 @@ Download plugin: https://modrinth.com/plugin/neochat
 - Interactive chat placeholders such as `[item]`, `[inv]`, `[ender]`, `[shulker]`, `[ping]`, `[pos]`, `[money]`, and `[playtime]`
 - Private messages with `/msg`, `/reply`, `/togglemsg`, and `/socialspy`
 - Ignore system with per-player ignore and ignore-all mode
+- Automatic announcements with chat, titles, action bars, boss bars, sounds, and optional vanilla toasts
 - Global chat mute commands
 - Built-in format debugging with `/neochat debug <player>`
 - Optional Towny chat integration
@@ -36,7 +37,7 @@ Optional integrations:
 1. Download the latest NeoChat jar from your release page.
 2. Place it in your server's `plugins/` folder.
 3. Start the server once to generate the configuration files.
-4. Edit `config.yml`, `messages.yml`, and `formats.yml` as needed.
+4. Edit `config.yml`, `messages.yml`, `formats.yml`, and `announcements.yml` as needed.
 5. Reload plugin.
 
 ## Commands
@@ -51,6 +52,11 @@ Optional integrations:
 | `/reply <message>` | Replies to the last private message | `neochat.pm.use` |
 | `/togglemsg` | Toggles private messages on or off | `neochat.pm.toggle` |
 | `/socialspy` | Toggles SocialSpy | `neochat.admin.spy` |
+| `/announcer toggle [on\|off]` | Toggles automatic announcements for yourself | `neochat.announcer.toggle` |
+| `/announcer status` | Shows your current announcement status | `neochat.announcer.toggle` |
+| `/announcer list` | Lists loaded announcements | `neochat.announcer.use` |
+| `/announcer preview <id>` | Previews a configured announcement | `neochat.announcer.preview` |
+| `/announcer send <id> [player]` | Sends a configured announcement manually | `neochat.announcer.send` |
 | `/ignore <player>` | Ignores or unignores a player | `neochat.ignore.use` |
 | `/ignoreall` | Toggles ignore-all mode | `neochat.ignore.ignoreall` |
 | `/tc [message]` | Toggles Towny chat or sends a town message | `neochat.command.townychat` |
@@ -66,6 +72,12 @@ Optional integrations:
 | `neochat.pm.use` | Allows private messaging |
 | `neochat.pm.toggle` | Allows toggling private messages |
 | `neochat.pm.bypass` | Bypasses private-message blocks on targets |
+| `neochat.announcer.use` | Allows viewing the announcement list |
+| `neochat.announcer.toggle` | Allows toggling automatic announcements for yourself |
+| `neochat.announcer.preview` | Allows previewing a configured announcement |
+| `neochat.announcer.send` | Allows manually sending a configured announcement |
+| `neochat.announcer.receive` | Allows receiving automatic announcements |
+| `neochat.announcer.force_receive` | Forces announcement delivery even if the player opted out |
 | `neochat.ignore.use` | Allows ignore commands |
 | `neochat.ignore.ignoreall` | Allows ignore-all mode |
 | `neochat.ignore.bypass` | Prevents being ignored |
@@ -94,6 +106,7 @@ NeoChat generates these main files on first startup:
 - `plugins/NeoChat/config.yml`
 - `plugins/NeoChat/messages.yml`
 - `plugins/NeoChat/formats.yml`
+- `plugins/NeoChat/announcements.yml`
 
 Notable configurable areas include:
 
@@ -104,6 +117,8 @@ Notable configurable areas include:
 - anti-spam and moderation rules
 - Discord webhook output
 - Towny chat format
+- automatic announcements with world and permission filters
+- optional vanilla toast notifications configured per announcement
 - update checker behavior
 
 Custom format permissions are driven by `formats.yml`, so servers can define their own `neochat.format.*` nodes per format entry.
@@ -134,6 +149,8 @@ build/libs/
 - The project avoids NMS, which helps compatibility across newer Paper-compatible server versions.
 - If you run very new server versions, also verify your PlaceholderAPI, Towny, and ItemsAdder builds.
 - If a LuckPerms suffix contains Nexo glyphs, keep that suffix outside `<gradient>` or similar styling blocks to avoid rendering the glyph tag literally.
+- The announcer currently supports chat, title, action bar, boss bar, sound, vanilla advancement toasts, per-player opt-out, and permission/world filters.
+- Toast notifications do not require PacketEvents, but they use vanilla advancement popups, so toast text should be treated as static rather than per-player dynamic content.
 
 ## License
 

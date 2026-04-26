@@ -25,6 +25,7 @@ public class PlayerDataManager {
     private final Set<UUID> viewingSnapshot = ConcurrentHashMap.newKeySet();
     private final Map<UUID, Set<UUID>> ignoredPlayers = new ConcurrentHashMap<>();
     private final Set<UUID> ignoreAllEnabled = ConcurrentHashMap.newKeySet();
+    private final Set<UUID> announcementsDisabled = ConcurrentHashMap.newKeySet();
 
     public PlayerDataManager(NeoChat neoChat) {
     }
@@ -113,5 +114,18 @@ public class PlayerDataManager {
 
         Set<UUID> ignores = ignoredPlayers.get(receiver.getUniqueId());
         return ignores != null && ignores.contains(sender.getUniqueId());
+    }
+
+    public boolean areAnnouncementsEnabled(Player player) {
+        return !announcementsDisabled.contains(player.getUniqueId());
+    }
+
+    public void setAnnouncementsEnabled(Player player, boolean enabled) {
+        if (enabled) {
+            announcementsDisabled.remove(player.getUniqueId());
+            return;
+        }
+
+        announcementsDisabled.add(player.getUniqueId());
     }
 }

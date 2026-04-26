@@ -63,6 +63,31 @@ towny-chat-on: "<aqua><bold>TOWNY</bold> <dark_gray>» <green>You have enabled y
 towny-chat-off: "<aqua><bold>TOWNY</bold> <dark_gray>» <red>You have returned to the global chat."
 
 # ========================================== #
+#                 ANNOUNCER                  #
+# ========================================== #
+announcer-prefix: "<dark_gray>[<aqua>Announcer<dark_gray>]"
+announcer-module-disabled: "<prefix> <red>The announcer module is disabled."
+announcer-player-only: "<prefix> <red>Only players can use this."
+announcer-usage: "<prefix> <gray>Available subcommands: %subcommands%"
+announcer-toggle-usage: "<prefix> <gray>Usage: <white>/%command% toggle [on|off]"
+announcer-preview-usage: "<prefix> <gray>Usage: <white>/%command% preview <id>"
+announcer-send-usage: "<prefix> <gray>Usage: <white>/%command% send <id> [player]"
+announcer-empty: "<prefix> <red>No announcements are configured."
+announcer-list-header: "<prefix> <gray>Loaded announcements <dark_gray>(<white>%count%<dark_gray>):"
+announcer-list-entry: "<gray>- <white>%id%</white> <dark_gray>|</dark_gray> %status%"
+announcer-unknown: "<prefix> <red>Unknown announcement <white>%id%</white>."
+announcer-toggle-on: "<prefix> <green>Automatic announcements are enabled again for you."
+announcer-toggle-off: "<prefix> <yellow>Automatic announcements are now disabled for you."
+announcer-status: "<prefix> <gray>Status: %status%"
+announcer-status-forced: "<prefix> <gray>Status: <green>ENABLED <dark_gray>(<yellow>forced by permission<dark_gray>)"
+announcer-force-receive: "<prefix> <yellow>A permission forces announcement delivery for you."
+announcer-preview-sent: "<prefix> <green>Preview sent for <white>%id%</white>."
+announcer-broadcast-sent: "<prefix> <green>Announcement <white>%id%</white> sent to <white>%count%</white> player(s)."
+announcer-sent-to-player: "<prefix> <green>Announcement <white>%id%</white> sent to <white>%player%</white>."
+announcer-no-targets: "<prefix> <red>There are no valid recipients for <white>%id%</white>."
+announcer-offline: "<prefix> <red>That player is not online."
+
+# ========================================== #
 #               UPDATE CHECKER               #
 # ========================================== #
 update-available: "<green>A new update is available for NeoChat! <gray>Current version: <white>%current% <gray>| New version: <white>%new%"

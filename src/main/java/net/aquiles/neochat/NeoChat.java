@@ -1,6 +1,8 @@
 package net.aquiles.neochat;
 
 import me.clip.placeholderapi.PlaceholderAPI;
+import net.aquiles.neochat.announcer.AnnouncementCommand;
+import net.aquiles.neochat.announcer.AnnouncementManager;
 import net.aquiles.neochat.chat.ChatListener;
 import net.aquiles.neochat.commands.AdminChatCommand;
 import net.aquiles.neochat.commands.IgnoreCommand;
@@ -40,6 +42,8 @@ public final class NeoChat extends JavaPlugin implements org.bukkit.event.Listen
     private File messagesFile;
     private File formatsFile;
     private YamlConfiguration formats;
+    private File announcementsFile;
+    private YamlConfiguration announcements;
     private volatile boolean chatMuted = false;
     private boolean papiEnabled = false;
     private volatile String latestVersion = null;
@@ -49,6 +53,7 @@ public final class NeoChat extends JavaPlugin implements org.bukkit.event.Listen
     private net.aquiles.neochat.utils.DiscordManager discordManager;
     private ChatListener chatListener;
     private FoliaSupport foliaSupport;
+    private AnnouncementManager announcerManager;
 
     @Override
     public void onEnable() {
@@ -56,6 +61,7 @@ public final class NeoChat extends JavaPlugin implements org.bukkit.event.Listen
 
         saveDefaultConfig();
         saveDefaultMessages();
+        saveDefaultAnnouncements();
 
         formatsFile = new File(getDataFolder(), "formats.yml");
         if (!formatsFile.exists()) {
@@ -82,7 +88,6 @@ public final class NeoChat extends JavaPlugin implements org.bukkit.event.Listen
         int pluginId = 29796;
         try {
             new org.bstats.bukkit.Metrics(this, pluginId);
-            getLogger().info("Metrics (bStats) enabled.");
         } catch (Exception e) {
             getLogger().warning("bStats could not be initialized.");
         }
@@ -97,8 +102,9 @@ public final class NeoChat extends JavaPlugin implements org.bukkit.event.Listen
 
         if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
             papiEnabled = true;
-            getLogger().info("PlaceholderAPI detected and activated.");
         }
+
+        announcerManager = new AnnouncementManager(this);
 
         registerListeners();
         registerCommands();
@@ -110,6 +116,8 @@ public final class NeoChat extends JavaPlugin implements org.bukkit.event.Listen
             getLogger().info("Towny Chat detected and activated.");
         }
 
+        announcerManager.enable();
+
         printLogo();
         long took = System.currentTimeMillis() - startTime;
         sendConsoleLegacyMessage("&aSuccessfully enabled. &7(took &f" + took + "ms&7)");
@@ -117,6 +125,9 @@ public final class NeoChat extends JavaPlugin implements org.bukkit.event.Listen
 
     @Override
     public void onDisable() {
+        if (announcerManager != null) {
+            announcerManager.shutdown();
+        }
         getLogger().info("NeoChat has been successfully deactivated.");
     }
 
@@ -124,6 +135,9 @@ public final class NeoChat extends JavaPlugin implements org.bukkit.event.Listen
         chatListener = new ChatListener(this);
         getServer().getPluginManager().registerEvents(chatListener, this);
         getServer().getPluginManager().registerEvents(new GUIListener(this), this);
+        if (announcerManager != null) {
+            getServer().getPluginManager().registerEvents(announcerManager, this);
+        }
         getServer().getPluginManager().registerEvents(this, this);
     }
 
@@ -149,6 +163,10 @@ public final class NeoChat extends JavaPlugin implements org.bukkit.event.Listen
         getCommand("ignore").setExecutor(ignoreCmd);
         getCommand("ignore").setTabCompleter(ignoreCmd);
         getCommand("ignoreall").setExecutor(ignoreCmd);
+
+        AnnouncementCommand announcementCommand = new AnnouncementCommand(this, announcerManager);
+        getCommand("announcer").setExecutor(announcementCommand);
+        getCommand("announcer").setTabCompleter(announcementCommand);
     }
 
     private void saveDefaultMessages() {
@@ -159,12 +177,24 @@ public final class NeoChat extends JavaPlugin implements org.bukkit.event.Listen
         messages = YamlConfiguration.loadConfiguration(messagesFile);
     }
 
+    private void saveDefaultAnnouncements() {
+        announcementsFile = new File(getDataFolder(), "announcements.yml");
+        if (!announcementsFile.exists()) {
+            saveResource("announcements.yml", false);
+        }
+        announcements = YamlConfiguration.loadConfiguration(announcementsFile);
+    }
+
     public void reloadPlugin() {
         reloadConfig();
         messages = YamlConfiguration.loadConfiguration(messagesFile);
         formats = YamlConfiguration.loadConfiguration(formatsFile);
+        announcements = YamlConfiguration.loadConfiguration(announcementsFile);
         if (chatListener != null) {
             chatListener.loadSettings();
+        }
+        if (announcerManager != null) {
+            announcerManager.reload();
         }
     }
 
@@ -234,6 +264,10 @@ public final class NeoChat extends JavaPlugin implements org.bukkit.event.Listen
         return formats;
     }
 
+    public YamlConfiguration getAnnouncements() {
+        return announcements;
+    }
+
     public boolean isChatMuted() {
         return chatMuted;
     }
@@ -280,6 +314,14 @@ public final class NeoChat extends JavaPlugin implements org.bukkit.event.Listen
 
     public void runAsync(Runnable task) {
         foliaSupport.runAsync(task);
+    }
+
+    public FoliaSupport.ScheduledTaskHandle runLater(Runnable task, long delayTicks) {
+        return foliaSupport.runGlobalLater(delayTicks, task);
+    }
+
+    public FoliaSupport.ScheduledTaskHandle runTimer(Runnable task, long delayTicks, long periodTicks) {
+        return foliaSupport.runGlobalTimer(delayTicks, periodTicks, task);
     }
 
     public <T> T callForEntity(Entity entity, Callable<T> task) {
@@ -370,5 +412,9 @@ public final class NeoChat extends JavaPlugin implements org.bukkit.event.Listen
 
     public net.aquiles.neochat.utils.DiscordManager getDiscordManager() {
         return discordManager;
+    }
+
+    public AnnouncementManager getAnnouncerManager() {
+        return announcerManager;
     }
 }

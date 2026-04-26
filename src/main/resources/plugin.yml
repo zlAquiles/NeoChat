@@ -35,6 +35,9 @@ commands:
     description: Allows reading other players' private messages.
     permission: neochat.admin.spy
     aliases: [ spy ]
+  announcer:
+    description: Manages automatic announcements and personal announcer settings.
+    aliases: [ announcements ]
   ignore:
     description: Ignores messages from a specific player.
     permission: neochat.ignore.use
@@ -62,6 +65,9 @@ permissions:
       neochat.bypass.alphanumeric: true
       neochat.pm.bypass: true
       neochat.ignore.bypass: true
+      neochat.announcer.preview: true
+      neochat.announcer.send: true
+      neochat.announcer.force_receive: true
   neochat.admin.reload:
     description: Allows reloading NeoChat configuration and messages.
     default: op
@@ -91,6 +97,24 @@ permissions:
     default: true
   neochat.ignore.bypass:
     description: Prevents the player from being ignored.
+    default: op
+  neochat.announcer.use:
+    description: Allows viewing the announcer list.
+    default: true
+  neochat.announcer.toggle:
+    description: Allows toggling automatic announcements on or off for yourself.
+    default: true
+  neochat.announcer.preview:
+    description: Allows previewing a configured announcement.
+    default: op
+  neochat.announcer.send:
+    description: Allows manually sending a configured announcement.
+    default: op
+  neochat.announcer.receive:
+    description: Allows receiving automatic announcements.
+    default: true
+  neochat.announcer.force_receive:
+    description: Forces announcement delivery and bypasses personal opt-out.
     default: op
   neochat.command.townychat:
     description: Allows using the Towny chat command.

@@ -1,0 +1,111 @@
+# ========================================== #
+#            NEOCHAT - ANNOUNCER             #
+# ========================================== #
+
+module:
+  enabled: false
+
+settings:
+  # Delay between automatic announcements.
+  interval-seconds: 180
+  # If true, a random enabled announcement is chosen each cycle.
+  random-order: false
+  # If true, one announcement is sent right after the plugin finishes enabling.
+  send-on-startup: false
+  # Skip the cycle when nobody is online.
+  skip-if-no-players: true
+  # Skip the cycle when filters remove every recipient.
+  skip-if-no-recipients: true
+
+# Supported placeholders:
+# %player%, %player_name%, %world%, %announcement_id%, %online%
+# PlaceholderAPI placeholders are also supported per-player when available.
+#
+# Toast notes:
+# - Toasts use vanilla advancement notifications, so they do not require PacketEvents.
+# - Toast title/description are effectively static and should not rely on per-player placeholders.
+# - The description is stored in the advancement display, but vanilla toast popups mainly show the title.
+announcements:
+  discord:
+    enabled: true
+    permission: ""
+    exclude-permission: ""
+    worlds:
+      - "*"
+    chat:
+      enabled: true
+      lines:
+        - "<dark_gray>[<aqua>NeoChat<dark_gray>] <white>Join our Discord: <click:open_url:https://discord.gg/example><aqua>discord.gg/example</aqua></click>"
+        - "<gray>There are currently <white>%online%</white> players online."
+    title:
+      enabled: false
+      title: ""
+      subtitle: ""
+      fade-in: 10
+      stay: 50
+      fade-out: 10
+    actionbar:
+      enabled: true
+      text: "<yellow>Join our Discord with <white>/discord</white>"
+      duration-ticks: 80
+    bossbar:
+      enabled: false
+      text: ""
+      progress: 1.0
+      color: blue
+      overlay: progress
+      duration-ticks: 100
+      flags: []
+    sound:
+      enabled: true
+      key: minecraft:block.note_block.pling
+      volume: 1.0
+      pitch: 1.2
+    toast:
+      enabled: true
+      title: "<aqua>Join our Discord"
+      description: "<gray>Stay up to date with the community."
+      icon: minecraft:diamond
+      frame: goal
+
+  vote:
+    enabled: true
+    permission: ""
+    exclude-permission: "neochat.announcer.exclude.vote"
+    worlds:
+      - "*"
+    chat:
+      enabled: true
+      lines:
+        - "<gold><bold>Vote for the server</bold></gold>"
+        - "<gray>Use <white>/vote</white> and claim your rewards."
+    title:
+      enabled: false
+      title: ""
+      subtitle: ""
+      fade-in: 10
+      stay: 40
+      fade-out: 10
+    actionbar:
+      enabled: true
+      text: "<yellow>Remember to use <white>/vote</white>"
+      duration-ticks: 60
+    bossbar:
+      enabled: false
+      text: ""
+      progress: 1.0
+      color: yellow
+      overlay: progress
+      duration-ticks: 80
+      flags: []
+    sound:
+      enabled: false
+      key: minecraft:block.note_block.pling
+      volume: 1.0
+      pitch: 1.0
+    toast:
+      enabled: false
+      title: "<gold>Remember to vote"
+      description: "<gray>Use <white>/vote</white> to support the server."
+      icon: minecraft:paper
+      frame: task
