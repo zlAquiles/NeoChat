@@ -148,11 +148,25 @@ custom-rules:
 #               INTEGRATIONS                 #
 # ========================================== #
 
+# --- DISCORD INTEGRATION ---
+discord:
+  # Modes: disabled, webhook, discordsrv
+  # Use "webhook" for Minecraft -> Discord only.
+  # Use "discordsrv" for Discord <-> Minecraft through DiscordSRV.
+  mode: disabled
+
 # --- DISCORD WEBHOOK ---
+# Only used when discord.mode is "webhook".
 discord-webhook:
-  enable: false
+  enable: false # Legacy option for old configs without discord.mode
   url: ""
   format: "**%player%**: %message%" # Supports Discord Markdown (e.g., ** for bold)
+
+# --- DISCORDSRV ---
+# Only used when discord.mode is "discordsrv".
+# Configure DiscordSRV's Channels in its own config.yml.
+# Optional short format for DiscordSRV's messages.yml:
+# DiscordToMinecraftChatMessageFormat: "&8[&bD&8] &f%username% &8» &f%message%"
 
 # --- TOWNY CHAT --- https://modrinth.com/plugin/towny
 towny-chat:

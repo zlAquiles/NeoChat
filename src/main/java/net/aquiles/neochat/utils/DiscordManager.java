@@ -10,6 +10,10 @@ import java.net.http.HttpResponse;
 
 public class DiscordManager {
 
+    private static final String MODE_DISABLED = "disabled";
+    private static final String MODE_WEBHOOK = "webhook";
+    private static final String MODE_DISCORDSRV = "discordsrv";
+
     private final NeoChat plugin;
     private final HttpClient httpClient;
 
@@ -19,7 +23,7 @@ public class DiscordManager {
     }
 
     public void sendMessage(String playerName, String message) {
-        if (!plugin.getConfig().getBoolean("discord-webhook.enable", false)) return;
+        if (!MODE_WEBHOOK.equals(getMode())) return;
 
         String url = plugin.getConfig().getString("discord-webhook.url", "");
         if (url == null || url.isEmpty() || url.equals("PON_TU_URL_AQUI")) return;
@@ -41,5 +45,24 @@ public class DiscordManager {
                     plugin.getLogger().warning("No se pudo enviar el mensaje a Discord: " + e.getMessage());
                     return null;
                 });
+    }
+
+    public void validateIntegration() {
+        if (MODE_DISCORDSRV.equals(getMode()) && plugin.getServer().getPluginManager().getPlugin("DiscordSRV") == null) {
+            plugin.getLogger().warning("Discord mode is set to 'discordsrv', but DiscordSRV is not installed. Discord bridge messages will be handled only after DiscordSRV is available.");
+        }
+    }
+
+    private String getMode() {
+        String configuredMode = plugin.getConfig().getString("discord.mode", "");
+        if (configuredMode != null && !configuredMode.isBlank()) {
+            String normalizedMode = configuredMode.trim().toLowerCase();
+            return switch (normalizedMode) {
+                case MODE_DISABLED, MODE_WEBHOOK, MODE_DISCORDSRV -> normalizedMode;
+                default -> MODE_DISABLED;
+            };
+        }
+
+        return plugin.getConfig().getBoolean("discord-webhook.enable", false) ? MODE_WEBHOOK : MODE_DISABLED;
     }
 }

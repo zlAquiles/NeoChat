@@ -4,7 +4,7 @@ main: net.aquiles.neochat.NeoChat
 api-version: '1.19'
 authors: [ Aquiles ]
 depend: [ ]
-softdepend: [ PlaceholderAPI, ItemsAdder, Towny ]
+softdepend: [ PlaceholderAPI, ItemsAdder, Towny, DiscordSRV ]
 description: Advanced plugin for chat formatting, interactivity, and placeholders.
 website: discord.gg/Wq9AHJP6VJ
 folia-supported: true

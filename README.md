@@ -16,7 +16,7 @@ Download plugin: https://modrinth.com/plugin/neochat
 - Global chat mute commands
 - Built-in format debugging with `/neochat debug <player>`
 - Optional Towny chat integration
-- Optional Discord webhook relay
+- Optional Discord webhook relay or DiscordSRV bridge compatibility
 - Anti-spam, anti-flood, anti-caps, anti-similarity, anti-swear, and character filtering
 - Folia-aware scheduling for chat, PMs, sounds, inventory viewers, Towny chat, and update checks
 
@@ -31,6 +31,7 @@ Optional integrations:
 - PlaceholderAPI
 - ItemsAdder
 - Towny
+- DiscordSRV
 
 ## Installation
 
@@ -115,13 +116,36 @@ Notable configurable areas include:
 - clickable link transformation
 - placeholder definitions
 - anti-spam and moderation rules
-- Discord webhook output
+- Discord integration through webhook mode or DiscordSRV mode
 - Towny chat format
 - automatic announcements with world and permission filters
 - optional vanilla toast notifications configured per announcement
 - update checker behavior
 
 Custom format permissions are driven by `formats.yml`, so servers can define their own `neochat.format.*` nodes per format entry.
+
+### DiscordSRV Bridge
+
+NeoChat can coexist with DiscordSRV through `discord.mode`.
+
+```yaml
+discord:
+  mode: discordsrv
+```
+
+When this mode is enabled, NeoChat will not send its own webhook messages. DiscordSRV should handle both directions of the bridge.
+
+In DiscordSRV's `config.yml`, configure the linked channel:
+
+```yaml
+Channels: {"global": "YOUR_DISCORD_CHANNEL_ID"}
+```
+
+A short Discord-to-Minecraft format for DiscordSRV's `messages.yml`:
+
+```yaml
+DiscordToMinecraftChatMessageFormat: "&8[&bD&8] &f%username% &8» &f%message%"
+```
 
 ## Building
 

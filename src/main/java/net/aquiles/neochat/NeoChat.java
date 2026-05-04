@@ -103,6 +103,7 @@ public final class NeoChat extends JavaPlugin implements org.bukkit.event.Listen
         if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
             papiEnabled = true;
         }
+        discordManager.validateIntegration();
 
         announcerManager = new AnnouncementManager(this);
 
@@ -190,6 +191,9 @@ public final class NeoChat extends JavaPlugin implements org.bukkit.event.Listen
         messages = YamlConfiguration.loadConfiguration(messagesFile);
         formats = YamlConfiguration.loadConfiguration(formatsFile);
         announcements = YamlConfiguration.loadConfiguration(announcementsFile);
+        if (discordManager != null) {
+            discordManager.validateIntegration();
+        }
         if (chatListener != null) {
             chatListener.loadSettings();
         }
