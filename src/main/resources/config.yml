@@ -170,7 +170,7 @@ discord-webhook:
 
 # --- TOWNY CHAT --- https://modrinth.com/plugin/towny
 towny-chat:
-  enable: false # Requires server restart if changed
+  enable: true # Requires server restart if changed
   format: "&f%townyadvanced_town%<click:suggest_command:'/msg %player_name% '><hover:show_text:'<hover_text>'>&f%player_name%</hover></click> &8» &2<message>"
   hover-message: |-
     <gray>   PLAYER PROFILE

@@ -10,6 +10,7 @@ import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import net.kyori.adventure.text.minimessage.tag.standard.StandardTags;
+import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Sound;
@@ -27,8 +28,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.logging.Level;
 
 public class ChatListener implements Listener {
 
@@ -40,6 +43,7 @@ public class ChatListener implements Listener {
     private final Map<UUID, Long> cooldowns = new ConcurrentHashMap<>();
     private final Map<UUID, String> lastMessages = new ConcurrentHashMap<>();
     private final Map<UUID, Long> lastMessageTimes = new ConcurrentHashMap<>();
+    private final AtomicLong lastChatFailureLog = new AtomicLong();
 
     private boolean pingEnabled, pingSoundEnabled, antiSwearEnabled, linksEnabled;
     private String pingPrefix, pingSoundType, swearReplacement, linkTransform;
@@ -79,10 +83,12 @@ public class ChatListener implements Listener {
         this.linkTransform = plugin.getConfig().getString("links.transform", "<hover:show_text:'<white>Click para abrir enlace'><click:open_url:'%url%'><aqua>%url%</aqua></click></hover>");
     }
 
-    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onPlayerChat(AsyncChatEvent event) {
         Player player = event.getPlayer();
+        event.renderer(this::renderFallbackChat);
 
+        try {
         if (plugin.getConfig().getBoolean("chat-cooldown.enable", true)) {
             String bypassPerm = plugin.getConfig().getString("chat-cooldown.permission-bypass", "neochat.bypass.cooldown");
             if (!player.hasPermission(bypassPerm)) {
@@ -197,33 +203,62 @@ public class ChatListener implements Listener {
         event.renderer(new ChatRenderer() {
             @Override
             public @NotNull Component render(@NotNull Player source, @NotNull Component sourceDisplayName, @NotNull Component message, @NotNull Audience viewer) {
-                Component viewerMessage = finalPlayerMessage;
+                try {
+                    Component viewerMessage = finalPlayerMessage;
 
-                if (!mentionedPlayers.isEmpty()) {
-                    for (Map.Entry<UUID, String> mentioned : mentionedPlayers.entrySet()) {
-                        String rawMention = pingPrefix + mentioned.getValue();
-                        boolean isReceiver = viewer instanceof Player && ((Player) viewer).getUniqueId().equals(mentioned.getKey());
+                    if (!mentionedPlayers.isEmpty()) {
+                        for (Map.Entry<UUID, String> mentioned : mentionedPlayers.entrySet()) {
+                            String rawMention = pingPrefix + mentioned.getValue();
+                            boolean isReceiver = viewer instanceof Player && ((Player) viewer).getUniqueId().equals(mentioned.getKey());
 
-                        String formatConfig = isReceiver
-                                ? plugin.getConfig().getString("ping.format.receiver", "<red>%name%</red>")
-                                : plugin.getConfig().getString("ping.format.others", "<white>%name%</white>");
+                            String formatConfig = isReceiver
+                                    ? plugin.getConfig().getString("ping.format.receiver", "<red>%name%</red>")
+                                    : plugin.getConfig().getString("ping.format.others", "<white>%name%</white>");
 
-                        Component replacement = strictMiniMessage.deserialize(formatConfig.replace("%name%", rawMention));
+                            Component replacement = strictMiniMessage.deserialize(formatConfig.replace("%name%", rawMention));
 
-                        viewerMessage = viewerMessage.replaceText(TextReplacementConfig.builder()
-                                .matchLiteral(rawMention)
-                                .replacement(replacement)
-                                .build());
+                            viewerMessage = viewerMessage.replaceText(TextReplacementConfig.builder()
+                                    .matchLiteral(rawMention)
+                                    .replacement(replacement)
+                                    .build());
+                        }
                     }
-                }
 
-                return strictMiniMessage.deserialize(
-                        finalGroupFormat,
-                        Placeholder.parsed("hover_text", finalHoverText),
-                        Placeholder.component("message", viewerMessage)
-                );
+                    return strictMiniMessage.deserialize(
+                            finalGroupFormat,
+                            Placeholder.parsed("hover_text", finalHoverText),
+                            Placeholder.component("message", viewerMessage)
+                    );
+                } catch (RuntimeException exception) {
+                    logChatFailure("rendering the selected format", source, exception);
+                    return renderFallbackChat(source, sourceDisplayName, message, viewer);
+                }
             }
         });
+        } catch (RuntimeException exception) {
+            logChatFailure("preparing the selected format", player, exception);
+        }
+    }
+
+    private Component renderFallbackChat(Player source, Component sourceDisplayName, Component message, Audience viewer) {
+        return Component.empty()
+                .append(sourceDisplayName)
+                .append(Component.text(" \u00BB ", NamedTextColor.DARK_GRAY))
+                .append(message.color(NamedTextColor.WHITE));
+    }
+
+    private void logChatFailure(String stage, Player player, RuntimeException exception) {
+        long now = System.currentTimeMillis();
+        long previous = lastChatFailureLog.get();
+        if (now - previous < 15_000L || !lastChatFailureLog.compareAndSet(previous, now)) {
+            return;
+        }
+
+        plugin.getLogger().log(
+                Level.WARNING,
+                "Failed while " + stage + " for " + player.getName() + ". NeoChat used its safe fallback format.",
+                exception
+        );
     }
 
     private PreparedChat buildPreparedChat(Player player, String rawMessage) {
@@ -355,7 +390,12 @@ public class ChatListener implements Listener {
     }
 
     private FormatSelection findBestFormatSelection(Player player, boolean groupOnly) {
-        if (plugin.getFormats() == null || !plugin.getFormats().contains("formats")) {
+        if (plugin.getFormats() == null) {
+            return null;
+        }
+
+        org.bukkit.configuration.ConfigurationSection formatsSection = plugin.getFormats().getConfigurationSection("formats");
+        if (formatsSection == null) {
             return null;
         }
 
@@ -367,7 +407,7 @@ public class ChatListener implements Listener {
         String groupFormat = null;
         String hoverText = null;
 
-        for (String key : plugin.getFormats().getConfigurationSection("formats").getKeys(false)) {
+        for (String key : formatsSection.getKeys(false)) {
             String perm = plugin.getFormats().getString("formats." + key + ".permission", "neochat.format." + key);
             int priority = plugin.getFormats().getInt("formats." + key + ".priority", 999);
             List<String> groups = plugin.getFormats().getStringList("formats." + key + ".groups");

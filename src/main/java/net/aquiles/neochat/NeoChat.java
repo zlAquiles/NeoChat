@@ -38,12 +38,12 @@ public final class NeoChat extends JavaPlugin implements org.bukkit.event.Listen
     private static final Pattern PAPI_PLACEHOLDER_PATTERN = Pattern.compile("%[^%\\s]+%");
 
     private PlayerDataManager playerDataManager;
-    private YamlConfiguration messages;
+    private volatile YamlConfiguration messages;
     private File messagesFile;
     private File formatsFile;
-    private YamlConfiguration formats;
+    private volatile YamlConfiguration formats;
     private File announcementsFile;
-    private YamlConfiguration announcements;
+    private volatile YamlConfiguration announcements;
     private volatile boolean chatMuted = false;
     private boolean papiEnabled = false;
     private volatile String latestVersion = null;
