@@ -406,6 +406,10 @@ public final class NeoChat extends JavaPlugin implements org.bukkit.event.Listen
         return chatListener == null ? null : chatListener.debugFormat(player);
     }
 
+    public net.aquiles.neochat.chat.ChatListener.ItemPlaceholderDebugInfo debugItemPlaceholder(Player player) {
+        return chatListener == null ? null : chatListener.debugItemPlaceholder(player);
+    }
+
     public Set<UUID> getTownyChatToggled() {
         return townyChatToggled;
     }

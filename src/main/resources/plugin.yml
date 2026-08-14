@@ -68,6 +68,14 @@ permissions:
       neochat.announcer.preview: true
       neochat.announcer.send: true
       neochat.announcer.force_receive: true
+      neochat.placeholder.ping: true
+      neochat.placeholder.pos: true
+      neochat.placeholder.money: true
+      neochat.placeholder.playtime: true
+      neochat.placeholder.item: true
+      neochat.placeholder.inv: true
+      neochat.placeholder.ender: true
+      neochat.placeholder.shulker: true
   neochat.admin.reload:
     description: Allows reloading NeoChat configuration and messages.
     default: op

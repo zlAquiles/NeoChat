@@ -367,6 +367,47 @@ public class ChatListener implements Listener {
         );
     }
 
+    public ItemPlaceholderDebugInfo debugItemPlaceholder(Player player) {
+        String regex = "";
+        String permission = "";
+        String resultFormat = "";
+        boolean configured = false;
+        boolean enabled = false;
+
+        for (Map<?, ?> placeholder : plugin.getConfig().getMapList("chat-placeholders")) {
+            Object name = placeholder.get("name");
+            if (!(name instanceof String) || !"item".equalsIgnoreCase((String) name)) {
+                continue;
+            }
+
+            configured = true;
+            Object enabledValue = placeholder.get("enable");
+            enabled = !(enabledValue instanceof Boolean) || (Boolean) enabledValue;
+            Object regexValue = placeholder.get("regex");
+            Object permissionValue = placeholder.get("permission");
+            Object resultValue = placeholder.get("result");
+            regex = regexValue instanceof String ? (String) regexValue : "<missing>";
+            permission = permissionValue instanceof String ? (String) permissionValue : "<missing>";
+            resultFormat = resultValue instanceof String ? (String) resultValue : "<missing>";
+            break;
+        }
+
+        ItemStack handItem = player.getInventory().getItemInMainHand();
+        String heldItem = handItem == null || handItem.getType().isAir() ? "<empty>" : handItem.getType().getKey().toString();
+        boolean permitted = !permission.isEmpty() && !"<missing>".equals(permission) && player.hasPermission(permission);
+        boolean matches = false;
+        String rendered = "<not evaluated>";
+
+        try {
+            matches = configured && Pattern.compile(regex).matcher("[i]").find();
+            rendered = PlainTextComponentSerializer.plainText().serialize(applyPlaceholders(player, Component.text("[i]")));
+        } catch (RuntimeException exception) {
+            rendered = "<error: " + exception.getClass().getSimpleName() + ">";
+        }
+
+        return new ItemPlaceholderDebugInfo(configured, enabled, permission, permitted, regex, matches, resultFormat, heldItem, rendered);
+    }
+
     private FormatSelection resolveFormatSelection(Player player) {
         int highestPriority = Integer.MAX_VALUE;
         String selectedKey = "built-in-default";
@@ -617,6 +658,19 @@ public class ChatListener implements Listener {
             String luckPermsSuffix,
             boolean groupFormatHasUnresolvedPlaceholders,
             boolean hoverHasUnresolvedPlaceholders
+    ) {
+    }
+
+    public record ItemPlaceholderDebugInfo(
+            boolean configured,
+            boolean enabled,
+            String permission,
+            boolean permitted,
+            String regex,
+            boolean matchesAlias,
+            String resultFormat,
+            String heldItem,
+            String renderedAlias
     ) {
     }
 }

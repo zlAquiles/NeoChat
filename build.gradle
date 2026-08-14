@@ -4,12 +4,12 @@ plugins {
 }
 
 group = 'me.aquiles'
-version = '1.0.3'
+version = '1.0.4'
 description = 'Advanced plugin for chat formatting, interactivity, and placeholders.'
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(17)
+        languageVersion = JavaLanguageVersion.of(25)
     }
 }
 
@@ -30,7 +30,7 @@ repositories {
 }
 
 dependencies {
-    compileOnly 'io.papermc.paper:paper-api:1.19.4-R0.1-SNAPSHOT'
+    compileOnly 'io.papermc.paper:paper-api:26.2.build.+'
     compileOnly 'me.clip:placeholderapi:2.11.6'
     compileOnly 'org.apache.logging.log4j:log4j-core:2.19.0'
     compileOnly 'com.palmergames.bukkit.towny:towny:0.99.2.0'
@@ -38,8 +38,18 @@ dependencies {
     implementation 'org.bstats:bstats-bukkit:3.2.1'
 }
 
+configurations.configureEach {
+    if (canBeResolved) {
+        attributes {
+            // Paper 26.2 itself requires Java 25, even though this plugin emits Java 17 bytecode.
+            attribute(org.gradle.api.attributes.java.TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE, 25)
+        }
+    }
+}
+
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
+    // Compile against Paper 26.2 while retaining Java 17 bytecode for 1.19+ servers.
     options.release = 17
 }
 

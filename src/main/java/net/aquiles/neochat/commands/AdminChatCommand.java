@@ -96,6 +96,10 @@ public class AdminChatCommand implements CommandExecutor, TabCompleter {
                 }
 
                 sendDebugInfo(sender, target, debugInfo);
+                ChatListener.ItemPlaceholderDebugInfo itemDebugInfo = plugin.callForEntity(target, () -> plugin.debugItemPlaceholder(target));
+                if (itemDebugInfo != null) {
+                    sendItemPlaceholderDebugInfo(sender, itemDebugInfo);
+                }
                 return true;
             }
 
@@ -150,6 +154,12 @@ public class AdminChatCommand implements CommandExecutor, TabCompleter {
         sendDebugLine(sender, "Raw hover", displayValue(debugInfo.rawHoverText()));
         sendDebugLine(sender, "Resolved hover", displayValue(debugInfo.resolvedHoverText()));
         sendDebugLine(sender, "Unresolved placeholders", "format=" + debugInfo.groupFormatHasUnresolvedPlaceholders() + ", hover=" + debugInfo.hoverHasUnresolvedPlaceholders());
+    }
+
+    private void sendItemPlaceholderDebugInfo(CommandSender sender, ChatListener.ItemPlaceholderDebugInfo debugInfo) {
+        sendDebugLine(sender, "[i] configured", "present=" + debugInfo.configured() + ", enabled=" + debugInfo.enabled() + ", permission=" + debugInfo.permission() + ", granted=" + debugInfo.permitted());
+        sendDebugLine(sender, "[i] rule", "matches=" + debugInfo.matchesAlias() + ", regex=" + debugInfo.regex() + ", result=" + debugInfo.resultFormat());
+        sendDebugLine(sender, "[i] evaluation", "hand=" + debugInfo.heldItem() + ", output=" + debugInfo.renderedAlias());
     }
 
     private void sendDebugLine(CommandSender sender, String label, String value) {
