@@ -22,9 +22,9 @@ Download plugin: https://modrinth.com/plugin/neochat
 
 ## Requirements
 
-- Java 17+
-- A Paper-compatible server
-- Built against `paper-api 1.19.4-R0.1-SNAPSHOT`
+- Java 17+ (Java 25 is required by Minecraft/Paper 26.2)
+- A Paper-compatible server from 1.19 through 26.2
+- Compiled against `paper-api 26.2` while using only the 1.19+ API surface
 
 Optional integrations:
 
@@ -99,6 +99,16 @@ Optional integrations:
 | `neochat.chat.hover` | Allows hover events in chat formatting |
 | `neochat.chat.font` | Allows custom font tags in chat formatting |
 | `neochat.chat.link` | Allows links to be formatted |
+| `neochat.placeholder.ping` | Allows `[ping]` |
+| `neochat.placeholder.pos` | Allows `[pos]` |
+| `neochat.placeholder.money` | Allows `[money]` |
+| `neochat.placeholder.playtime` | Allows `[playtime]` |
+| `neochat.placeholder.item` | Allows `[item]` and `[i]` |
+| `neochat.placeholder.inv` | Allows `[inv]` |
+| `neochat.placeholder.ender` | Allows `[ender]` |
+| `neochat.placeholder.shulker` | Allows `[shulker]` |
+
+Chat placeholders are restricted by default. Operators receive all of them through `neochat.admin`; grant the individual permissions above to let other players use the corresponding placeholder.
 
 ## Configuration
 
